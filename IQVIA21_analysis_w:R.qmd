@@ -1,0 +1,1370 @@
+---
+title: "IQVIA21_analysis_w/R"
+format: html
+editor: visual
+---
+
+```{r}
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(tidyverse)
+```
+
+# !!import data
+
+```{r}
+patient_demographics <- read_csv("Q.patient_demographics.csv")
+
+usage <- read_csv("Q.usage.csv")
+usage <- usage %>%
+  filter_at(vars(antibiotic_name, dosage_form, provider_description), all_vars(!is.na(.)))
+
+unfiltered <- read_csv("Q.unfiltered100k_1.csv")
+unfiltered <- unfiltered
+  #na.omit()
+
+#*add age group___
+patient_demographics <- patient_demographics %>%
+  filter (pat_age_nbr >=0) %>%
+  mutate(age_cat = case_when(
+  pat_age_nbr < 21 ~ "Pediatrics",
+  pat_age_nbr >= 65 ~ "Elders",
+  TRUE ~ "Adults"
+  ))
+
+unfiltered <- unfiltered %>%
+filter (pat_age_nbr >=0) %>%
+  mutate(age_cat = case_when(
+  pat_age_nbr < 21 ~ "Pediatrics",
+  pat_age_nbr >= 65 ~ "Elders",
+  TRUE ~ "Adults"
+  ))
+
+###___
+
+RX <- unfiltered %>%
+  select(usc_lvl3_desc,
+    unifm_prod_nm,
+    pat_age_nbr,
+    rx_dosage_amt,
+    dosage_form_nm,
+    strnt_desc,
+    pri_spcl_desc,
+    provider_st_cd,
+    age_cat) %>%
+  filter(rx_dosage_amt > 0)
+
+copayment <- unfiltered %>%
+  select(usc_lvl3_desc,
+         unifm_prod_nm,
+      pri_spcl_desc,
+      pat_age_nbr,
+      copay_amt,
+      cust_prc,
+      pat_pay_amt,
+      model_typ_cd,
+      model_typ_nm,
+      age_cat)%>%
+  filter(copay_amt > 0)
+```
+
+#Patient demographics
+
+##draw graph by antibiotic category
+
+```{r}
+ggplot(patient_demographics, aes(x=age_cat))+
+  geom_bar()+
+  facet_wrap(vars(usc_lvl3_desc))
+```
+
+## !!make top used antibiotic groups within each category
+
+```{r}
+top_prod <- patient_demographics %>%
+  filter(usc_lvl3_desc == "ANTNFCT SYSTEMIC, OTHER") %>%
+  group_by(unifm_prod_nm) %>%
+  summarise(count = sum(n)) %>%
+  arrange(desc(count)) %>%
+  slice_head(n=5) 
+antnfct_systemic<-top_prod$unifm_prod_nm
+
+
+
+top_prod <- patient_demographics %>%
+  filter(usc_lvl3_desc == "ANTNFCT, BROAD/MEDIUM SPECTRUM") %>%
+  group_by(unifm_prod_nm) %>%
+  summarise(count = sum(n)) %>%
+  arrange(desc(count)) %>%
+  slice_head(n=5) 
+antnfct_broad<-top_prod$unifm_prod_nm
+
+
+top_prod <- patient_demographics %>%
+  filter(usc_lvl3_desc == "B-LACTAM, INCREASED ACTIVITY") %>%
+  group_by(unifm_prod_nm) %>%
+  summarise(count = sum(n)) %>%
+  arrange(desc(count)) %>%
+  slice_head(n=5) 
+b_lactam<-top_prod$unifm_prod_nm
+
+
+top_prod <- patient_demographics %>%
+  filter(usc_lvl3_desc == "OPHTHALMIC ANTI-INFECTIVES") %>%
+  group_by(unifm_prod_nm) %>%
+  summarise(count = sum(n)) %>%
+  arrange(desc(count)) %>%
+  slice_head(n=5) 
+ophthalmic<-top_prod$unifm_prod_nm
+
+
+top_prod <- patient_demographics %>%
+  filter(usc_lvl3_desc == "OTIC ANTI-INFECTIVES") %>%
+  group_by(unifm_prod_nm) %>%
+  summarise(count = sum(n)) %>%
+  arrange(desc(count)) %>%
+  slice_head(n=5) 
+otic<-top_prod$unifm_prod_nm
+
+
+top_prod <- patient_demographics %>%
+  filter(usc_lvl3_desc == "OXAZOLIDINONES") %>%
+  group_by(unifm_prod_nm) %>%
+  summarise(count = sum(n)) %>%
+  arrange(desc(count)) %>%
+  slice_head(n=5) 
+oxazolidinones<-top_prod$unifm_prod_nm
+
+
+top_prod <- patient_demographics %>%
+  filter(usc_lvl3_desc == "SULFONAMIDES & TRIMETHOPRIM") %>%
+  group_by(unifm_prod_nm) %>%
+  summarise(count = sum(n)) %>%
+  arrange(desc(count)) %>%
+  slice_head(n=5) 
+sulf_trim<-top_prod$unifm_prod_nm
+
+
+top_prod <- patient_demographics %>%
+  filter(usc_lvl3_desc == "VAGINAL ANTI-INFECTIVES") %>%
+  group_by(unifm_prod_nm) %>%
+  summarise(count = sum(n)) %>%
+  arrange(desc(count)) %>%
+  slice_head(n=5) 
+vaginal<-top_prod$unifm_prod_nm
+```
+
+##draw graph by antibiotics
+
+```{r}
+patient_demographics %>%
+  filter(unifm_prod_nm == antnfct_systemic) %>%
+  group_by(unifm_prod_nm) %>%
+ggplot(aes(x=age_cat, y=sum(n)))+
+  geom_col()+
+  facet_wrap(vars(unifm_prod_nm))
+
+patient_demographics %>%
+  filter(unifm_prod_nm == antnfct_broad) %>%
+  group_by(unifm_prod_nm) %>%
+ggplot(aes(x=age_cat, y=sum(n)))+
+  geom_col()+
+  facet_wrap(vars(unifm_prod_nm))
+
+patient_demographics %>%
+  filter(unifm_prod_nm == b_lactam) %>%
+  group_by(unifm_prod_nm) %>%
+ggplot(aes(x=age_cat, y=sum(n)))+
+  geom_col()+
+  facet_wrap(vars(unifm_prod_nm))
+
+patient_demographics %>%
+  filter(unifm_prod_nm == ophthalmic) %>%
+  group_by(unifm_prod_nm) %>%
+ggplot(aes(x=age_cat, y=sum(n)))+
+  geom_col()+
+  facet_wrap(vars(unifm_prod_nm))
+
+patient_demographics %>%
+  filter(unifm_prod_nm == otic) %>%
+  group_by(unifm_prod_nm) %>%
+ggplot(aes(x=age_cat, y=sum(n)))+
+  geom_col()+
+  facet_wrap(vars(unifm_prod_nm))
+
+patient_demographics %>%
+  filter(unifm_prod_nm == oxazolidinones) %>%
+  group_by(unifm_prod_nm) %>%
+ggplot(aes(x=age_cat, y=sum(n)))+
+  geom_col()+
+  facet_wrap(vars(unifm_prod_nm))
+
+patient_demographics %>%
+  filter(unifm_prod_nm == sulf_trim) %>%
+  group_by(unifm_prod_nm) %>%
+ggplot(aes(x=age_cat, y=sum(n)))+
+  geom_col()+
+  facet_wrap(vars(unifm_prod_nm))
+
+patient_demographics %>%
+  filter(unifm_prod_nm == vaginal) %>%
+  group_by(unifm_prod_nm) %>%
+ggplot(aes(x=age_cat, y=sum(n)))+
+  geom_col()+
+  facet_wrap(vars(unifm_prod_nm))
+```
+
+#Usage
+
+##trial plots for novel visualization formats
+
+```{r}
+#hide
+#Faceted Heatmap by Dosage Form
+#helped by AI
+usage %>%
+  filter(antibiotic_name == antnfct_systemic)%>%
+ggplot(aes(provider_description,
+           antibiotic_name,
+           fill = count)) +
+  geom_tile() +
+  facet_wrap(~ dosage_form) +
+  scale_fill_gradient(low = "yellow", high = "red")+
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 90)
+  )
+```
+
+```{r}
+#hide
+#bubble
+usage %>%
+  filter(antibiotic_name == antnfct_systemic)%>%
+ggplot(aes(provider_description,
+           antibiotic_name,
+           size = count,
+           color = dosage_form)) +
+  geom_point(alpha = .7) +
+  scale_size(range = c(3, 9)) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 90)
+  )
+```
+
+##draw bar graphs
+
+```{r}
+#bar
+usage %>%
+  filter(antibiotic_name  %in%  antnfct_systemic,
+         count >10)%>%
+ggplot(aes(x = provider_description,
+           y = count,
+           fill = dosage_form)) +
+  geom_col(position = "stack") +
+  coord_flip()+
+  geom_text(aes(label = count), vjust = -0.2)+
+  #facet_wrap(~ antibiotic_name)+
+  labs(title = "Distribution of Prescriptions by Provider and Dosage",
+    subtitle = "ANTNFCT SYSTEMIC, OTHER")
+
+```
+
+```{r}
+usage %>%
+  filter(antibiotic_name  %in%  antnfct_broad,
+         count >10)%>%
+  group_by(antibiotic_name) %>%
+  slice_max(n=10,
+            order_by = count) %>%
+ggplot(aes(x = provider_description,
+           y = count,
+           fill = dosage_form)) +
+  geom_col(position = "stack") +
+  coord_flip() +
+  facet_wrap(~ antibiotic_name) + 
+  geom_text_repel(
+    aes(label = count),
+    position = position_stack(vjust = 0.3),
+    size = 3)+
+  labs(title = "Distribution of Prescriptions by Provider and Dosage",
+    subtitle ="ANTNFCT, BROAD/MEDIUM SPECTRUM")
+
+#if i stack all antibiotics together and only focus on the condition:
+usage %>%
+  filter(antibiotic_name  %in%  antnfct_broad,
+         count >10)%>%
+  group_by(antibiotic_name) %>%
+  slice_max(n=10,
+            order_by = count) %>%
+ggplot(aes(x = provider_description,
+           y = count,
+           fill = dosage_form)) +
+  geom_col(position = "stack") +
+  coord_flip() +
+  labs(title = "Distribution of Prescriptions by Provider and Dosage",
+    subtitle ="ANTNFCT, BROAD/MEDIUM SPECTRUM")
+
+
+```
+
+```{r}
+usage %>%
+  filter(antibiotic_name  %in%  b_lactam,
+         count >10)%>%
+  group_by(antibiotic_name) %>%
+  slice_max(n=10,
+            order_by = count) %>%
+  ggplot(aes(x = provider_description,
+           y = count,
+           fill = dosage_form)) +
+  geom_col(position = "stack") +
+  coord_flip()+
+  facet_wrap(~ antibiotic_name)+
+  geom_text(
+    aes(label = count),
+    position = position_stack(vjust = 0.5),
+    size = 3)+
+  labs(title = "Distribution of Prescriptions by Provider and Dosage",
+    subtitle ="B-LACTAM, INCREASED ACTIVITY")
+
+
+usage %>%
+  filter(antibiotic_name  %in%  ophthalmic,
+         count >10)%>%
+  group_by(antibiotic_name) %>%
+  slice_max(n=10,
+            order_by = count) %>%
+  ggplot(aes(x = provider_description,
+           y = count,
+           fill = dosage_form)) +
+  geom_col(position = "stack") +
+  coord_flip()+
+  facet_wrap(~ antibiotic_name) +
+  geom_text(
+    aes(label = count),
+    position = position_stack(vjust = 0.5),
+    size = 3)+
+  labs(title = "Distribution of Prescriptions by Provider and Dosage",
+    subtitle ="OPHTHALMIC ANTI-INFECTIVES")
+
+
+usage %>%
+  filter(antibiotic_name  %in%  otic,
+         count >10)%>%
+  group_by(antibiotic_name) %>%
+  slice_max(n=10,
+            order_by = count) %>%
+  ggplot(aes(x = provider_description,
+           y = count,
+           fill = dosage_form)) +
+  geom_col(position = "stack") +
+  coord_flip()+
+  facet_wrap(~ antibiotic_name)+
+  geom_text(
+    aes(label = count),
+    position = position_stack(vjust = 0.5),
+    size = 3)+
+  labs(title = "Distribution of Prescriptions by Provider and Dosage",
+    subtitle = "OTIC ANTI-INFECTIVES")
+
+
+usage %>%
+  filter(antibiotic_name  %in%  oxazolidinones,
+         count >10)%>%
+  group_by(antibiotic_name) %>%
+  slice_max(n=10,
+            order_by = count) %>%
+  ggplot(aes(x = provider_description,
+           y = count,
+           fill = dosage_form)) +
+  geom_col(position = "stack") +
+  coord_flip()+
+  facet_wrap(~ antibiotic_name)+
+  geom_text(
+    aes(label = count),
+    position = position_stack(vjust = 0.5),
+    size = 3) +
+  labs(title = "Distribution of Prescriptions by Provider and Dosage",
+    subtitle = "OXAZOLIDINONES")
+
+
+usage %>%
+  filter(antibiotic_name  %in%  sulf_trim,
+         count >10)%>%
+  group_by(antibiotic_name) %>%
+  slice_max(n=10,
+            order_by = count) %>%
+  ggplot(aes(x = provider_description,
+           y = count,
+           fill = dosage_form)) +
+  geom_col(position = "stack") +
+  coord_flip()+
+  facet_wrap(~ antibiotic_name)+
+  geom_text(
+    aes(label = count),
+    position = position_stack(vjust = 0.5),
+    size = 3) +
+  labs(title = "Distribution of Prescriptions by Provider and Dosage",
+    subtitle = "SULFONAMIDES & TRIMETHOPRIM")
+
+
+usage %>%
+  filter(antibiotic_name  %in%  vaginal,
+         count >10)%>%
+  group_by(antibiotic_name) %>%
+  slice_max(n=10,
+            order_by = count) %>%
+  ggplot(aes(x = provider_description,
+           y = count,
+           fill = dosage_form)) +
+  geom_col(position = "stack") +
+  coord_flip()+
+  facet_wrap(~ antibiotic_name) +
+  geom_text_repel(
+    aes(label = count),
+    position = position_stack(vjust = 0.5),
+    size = 3) +
+  labs(title = "Distribution of Prescriptions by Provider and Dosage",
+    subtitle = "VAGINAL ANTI-INFECTIVES")
+```
+
+#RX
+
+##boxplots of the distribution of RX amount (range) 1) by antibiotics; 2) across prescribing conditions, by antibiotic categories; 3) acrosss age groups
+
+```{r}
+RX %>%
+filter(usc_lvl3_desc == "B-LACTAM, INCREASED ACTIVITY") %>%
+  group_by(unifm_prod_nm) %>%
+  ggplot(aes(x=unifm_prod_nm, y=rx_dosage_amt))+
+  geom_violin(scale = "width")+
+  geom_boxplot(width=0.2,
+               color = "blue")+
+  theme(axis.text=element_text(size=7),
+        strip.text = element_text(size = 7)) +
+  labs(title = "Distribution of RX amount by antibiotic",
+       subtitle = "B-LACTAM, INCREASED ACTIVITY",
+       x = "Antibiotics",
+       y = "Total Rx Amount")
+
+RX %>%
+filter(usc_lvl3_desc == "B-LACTAM, INCREASED ACTIVITY") %>%
+  group_by(pri_spcl_desc) %>%
+  mutate(num = n()) %>%
+  ungroup() %>%
+  filter(num >5) %>%
+  ggplot(aes(x=unifm_prod_nm, y=rx_dosage_amt, color=dosage_form_nm))+
+  geom_boxplot(width=0.5)+
+  facet_wrap(~ pri_spcl_desc)+
+  theme(axis.text=element_text(size=7),
+        strip.text = element_text(size = 7)) +
+  labs(title = "Distribution of RX amount across prescribing conditions",
+       subtitle = "B-LACTAM, INCREASED ACTIVITY")
+
+RX %>%
+filter(usc_lvl3_desc == "B-LACTAM, INCREASED ACTIVITY") %>%
+  group_by(age_cat) %>%
+  mutate(indivdual = n()) %>%
+  ungroup() %>%
+  filter(indivdual >5) %>%
+  ggplot(aes(x=age_cat, y=rx_dosage_amt, color=dosage_form_nm))+
+  geom_boxplot(width=0.5)+
+  facet_wrap(~ unifm_prod_nm)+
+  theme(axis.text=element_text(size=7),
+        strip.text = element_text(size = 7))+
+  labs(title = "Distribution of RX amount across age groups",
+       subtitle = "B-LACTAM, INCREASED ACTIVITY")
+```
+
+```{r}
+RX %>%
+filter(usc_lvl3_desc == "SULFONAMIDES & TRIMETHOPRIM",) %>%
+  group_by(unifm_prod_nm) %>%
+  filter(n() >= 5)%>%
+  ggplot(aes(x=unifm_prod_nm, y=rx_dosage_amt))+
+  geom_violin(scale = "width")+
+  geom_boxplot(width=0.2,
+               aes(color = unifm_prod_nm))+
+  theme(axis.text=element_text(size=7),
+        strip.text = element_text(size = 7)) +
+  labs(title = "Distribution of RX amount by antibiotic",
+       subtitle = "SULFONAMIDES & TRIMETHOPRIM",
+       color = "Antibiotics",
+       x = "Antibiotics",
+       y = "Total Rx Amount")
+
+RX %>%
+filter(usc_lvl3_desc == "SULFONAMIDES & TRIMETHOPRIM") %>%
+  group_by(pri_spcl_desc) %>%
+  mutate(num = n()) %>%
+  ungroup() %>%
+  filter(num >5) %>%
+  ggplot(aes(x=unifm_prod_nm, y=rx_dosage_amt, color=dosage_form_nm))+
+  geom_boxplot(width=0.5)+
+  facet_wrap(~ pri_spcl_desc)+
+  theme(axis.text=element_text(size=7),
+        strip.text = element_text(size = 7),
+         axis.text.x = element_text(angle = 90))+
+  labs(title = "Distribution of RX amount across prescribing conditions",
+       subtitle = "SULFONAMIDES & TRIMETHOPRIM")
+
+
+RX %>%
+filter(usc_lvl3_desc == "SULFONAMIDES & TRIMETHOPRIM") %>%
+  group_by(age_cat) %>%
+  mutate(indivdual = n()) %>%
+  ungroup() %>%
+  filter(indivdual >3) %>%
+  ggplot(aes(x=age_cat, y=rx_dosage_amt, color=dosage_form_nm))+
+  geom_boxplot(width=0.5)+
+  facet_wrap(~ unifm_prod_nm)+
+  theme(axis.text=element_text(size=7),
+        strip.text = element_text(size = 7))+
+  labs(title = "Distribution of RX amount across age groups",
+       subtitle = "SULFONAMIDES & TRIMETHOPRIM")
+```
+
+```{r}
+RX %>%
+filter(usc_lvl3_desc == "ANTNFCT, BROAD/MEDIUM SPECTRUM") %>%
+  group_by(unifm_prod_nm) %>%
+  filter(n() >= 50)%>%
+  ggplot(aes(x=unifm_prod_nm, y=rx_dosage_amt))+
+  geom_violin(scale = "width")+
+  geom_boxplot(width=0.2,
+               aes(color = unifm_prod_nm))+
+  scale_y_log10()+
+  theme(axis.text=element_text(size=7),
+        strip.text = element_text(size = 7),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  labs(title = "Distribution of RX amount by antibiotic",
+       subtitle = "ANTNFCT, BROAD/MEDIUM SPECTRUM",
+       color = "Antibiotics",
+       x = "Antibiotics",
+       y = "Total Rx Amount")
+
+#########
+
+#the conditions for ANTNFCT, BROAD/MEDIUM SPECTRUM are a bit complex
+RX %>%
+filter(usc_lvl3_desc == "ANTNFCT, BROAD/MEDIUM SPECTRUM") %>%
+  group_by(pri_spcl_desc) %>%
+  mutate(num = n()) %>%
+  ungroup() %>%
+  filter(num >100) %>%
+  ggplot(aes(x=unifm_prod_nm, y=rx_dosage_amt, color=dosage_form_nm))+
+  geom_boxplot(width=0.5)+
+  facet_wrap(~ pri_spcl_desc)+
+  theme(axis.text=element_text(size=7),
+        strip.text = element_text(size = 7))+
+  labs(title = "Distribution of RX amount across prescribing conditions",
+       subtitle = "ANTNFCT, BROAD/MEDIUM SPECTRUM")
+
+#since the results are overwhelming, look into some conditions selectively
+##reference list
+RX %>%
+filter(usc_lvl3_desc == "ANTNFCT, BROAD/MEDIUM SPECTRUM") %>%
+  group_by(pri_spcl_desc) %>%
+  mutate(num = n()) %>%
+  ungroup() %>%
+  filter(num >100)%>%
+  distinct(pri_spcl_desc) %>%   
+  print(n = Inf)    
+##boxplot for a single condition
+RX %>%
+filter(usc_lvl3_desc == "ANTNFCT, BROAD/MEDIUM SPECTRUM",
+       pri_spcl_desc == "EMERGENCY MEDICINE") %>%
+  ggplot(aes(x=unifm_prod_nm, y=rx_dosage_amt, color=dosage_form_nm))+
+  geom_boxplot(width=0.5)+
+  facet_wrap(~ pri_spcl_desc)+
+  theme(axis.text=element_text(size=7),
+        strip.text = element_text(size = 7),
+        axis.text.x = element_text(angle = 90))+
+  labs(title = "Distribution of RX amount across prescribing conditions",
+       subtitle = "ANTNFCT, BROAD/MEDIUM SPECTRUM")
+
+
+#########
+
+RX %>%
+filter(usc_lvl3_desc == "ANTNFCT, BROAD/MEDIUM SPECTRUM") %>%
+  group_by(age_cat) %>%
+  mutate(indivdual = n()) %>%
+  ungroup() %>%
+  filter(indivdual >3) %>%
+  ggplot(aes(x=age_cat, y=rx_dosage_amt, color=dosage_form_nm))+
+  geom_boxplot(width=0.5)+
+  facet_wrap(~ unifm_prod_nm)+
+  theme(axis.text=element_text(size=7),
+        strip.text = element_text(size = 7))+
+  labs(title = "Distribution of RX amount across age groups",
+       subtitle = "ANTNFCT, BROAD/MEDIUM SPECTRUM")
+
+```
+
+```{r}
+RX %>%
+filter(usc_lvl3_desc == "ANTNFCT SYSTEMIC, OTHER",) %>%
+  group_by(unifm_prod_nm) %>%
+  filter(n() >= 5)%>%
+  ggplot(aes(x=unifm_prod_nm, y=rx_dosage_amt))+
+  geom_violin(scale = "width")+
+  geom_boxplot(width=0.2,
+               aes(color = unifm_prod_nm))+
+  scale_y_log10()+
+  theme(axis.text=element_text(size=7),
+        strip.text = element_text(size = 7),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  labs(title = "Distribution of RX amount by antibiotic",
+       subtitle = "ANTNFCT SYSTEMIC, OTHER",
+       color = "Antibiotics",
+       x = "Antibiotics",
+       y = "Total Rx Amount")
+
+
+
+RX %>%
+filter(usc_lvl3_desc == "ANTNFCT SYSTEMIC, OTHER") %>%
+  group_by(pri_spcl_desc) %>%
+  mutate(num = n()) %>%
+  ungroup() %>%
+  #filter(num >5) %>%
+  ggplot(aes(x=unifm_prod_nm, y=rx_dosage_amt, color=dosage_form_nm))+
+  geom_boxplot(width=0.5)+
+  facet_wrap(~ pri_spcl_desc)+
+  theme(axis.text=element_text(size=7),
+        strip.text = element_text(size = 7))+
+  labs(title = "Distribution of RX amount across prescribing conditions",
+       subtitle = "ANTNFCT SYSTEMIC, OTHER")
+
+
+RX %>%
+filter(usc_lvl3_desc == "ANTNFCT SYSTEMIC, OTHER") %>%
+  group_by(age_cat) %>%
+  mutate(indivdual = n()) %>%
+  ungroup() %>%
+  filter(indivdual >3) %>%
+  ggplot(aes(x=age_cat, y=rx_dosage_amt, color=dosage_form_nm))+
+  geom_boxplot(width=0.5)+
+  facet_wrap(~ unifm_prod_nm)+
+  theme(axis.text=element_text(size=7),
+        strip.text = element_text(size = 7))+
+  labs(title = "Distribution of RX amount across age groups",
+       subtitle = "ANTNFCT SYSTEMIC, OTHER")
+```
+
+```{r}
+RX %>%
+filter(usc_lvl3_desc == "OXAZOLIDINONES",) %>%
+  group_by(unifm_prod_nm) %>%
+  filter(n() >= 5)%>%
+  ggplot(aes(x=unifm_prod_nm, y=rx_dosage_amt))+
+  geom_violin(scale = "width")+
+  geom_boxplot(width=0.2,
+               aes(color = unifm_prod_nm))+
+  scale_y_log10()+
+  theme(axis.text=element_text(size=7),
+        strip.text = element_text(size = 7),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  labs(title = "Distribution of RX amount by antibiotic",
+       subtitle = "OXAZOLIDINONES",
+       color = "Antibiotics",
+       x = "Antibiotics",
+       y = "Total Rx Amount")
+
+
+RX %>%
+filter(usc_lvl3_desc == "OXAZOLIDINONES") %>%
+  group_by(pri_spcl_desc) %>%
+  mutate(num = n()) %>%
+  ungroup() %>%
+  #filter(num >5) %>%
+  ggplot(aes(x=unifm_prod_nm, y=rx_dosage_amt, color=dosage_form_nm))+
+  geom_boxplot(width=0.5)+
+  facet_wrap(~ pri_spcl_desc)+
+  theme(axis.text=element_text(size=7),
+        strip.text = element_text(size = 7))+
+  labs(title = "Distribution of RX amount across prescribing conditions",
+       subtitle = "OXAZOLIDINONES")
+
+RX %>%
+filter(usc_lvl3_desc == "OXAZOLIDINONES") %>%
+  group_by(age_cat) %>%
+  mutate(indivdual = n()) %>%
+  ungroup() %>%
+  filter(indivdual >3) %>%
+  ggplot(aes(x=age_cat, y=rx_dosage_amt, color=dosage_form_nm))+
+  geom_boxplot(width=0.5)+
+  facet_wrap(~ unifm_prod_nm)+
+  theme(axis.text=element_text(size=7),
+        strip.text = element_text(size = 7))+
+  labs(title = "Distribution of RX amount across age groups",
+       subtitle = "OXAZOLIDINONES")
+```
+
+## are there any (potentially) unusual prescribing patterns?
+
+### !!make rx_dosage_amt comparable
+
+```{r}
+#assisted with AI
+#run & hide
+
+#step1:Classify 49 strength descriptions into one of 8 patterns
+library(dplyr)
+library(stringr)
+library(readr)
+
+RX <- RX %>%
+  mutate(
+    
+    strength_type = case_when(
+
+      str_detect(strnt_desc, "^\\d+ MG$") ~ "single_mg",
+
+      str_detect(strnt_desc, "^\\d+ GM$") ~ "single_g",
+
+      str_detect(strnt_desc, "^\\d+-\\d+\\.?\\d* MG$") ~ "combo_mg",
+
+      str_detect(strnt_desc, "^\\d+ MG/\\d+ ML$") ~ "mg_per_volume",
+
+      str_detect(strnt_desc,
+                 "^\\d+-\\d+\\.?\\d* MG/\\d+ ML$") ~ "combo_per_volume",
+
+      str_detect(strnt_desc, "^\\d+ MG/ML$") ~ "mg_per_ml",
+
+      str_detect(strnt_desc, "^\\d+ MG/24HR$") ~ "mg_per_24hr",
+
+      str_detect(strnt_desc,
+                 "^\\d+-\\d+\\.?\\d* MG/12HR$") ~ "combo_12hr",
+
+      TRUE ~ "other"
+
+    )
+  )
+
+#step2: extract the (first) ingredient
+## ant1_mg = strength of the first active ingredient
+
+
+RX <- RX %>%
+  mutate(
+    ant1_mg = case_when(
+
+      strength_type == "single_mg" ~
+        as.numeric(str_extract(strnt_desc, "^\\d+\\.?\\d*")),
+
+      strength_type == "single_g" ~
+        as.numeric(str_extract(strnt_desc, "^\\d+\\.?\\d*")) * 1000,
+
+      strength_type %in% c("combo_mg",
+                           "combo_per_volume",
+                           "combo_12hr") ~
+        as.numeric(str_extract(strnt_desc, "^\\d+\\.?\\d*")),
+
+      strength_type %in% c("mg_per_volume",
+                           "mg_per_ml",
+                           "mg_per_24hr") ~
+        as.numeric(str_extract(strnt_desc, "^\\d+\\.?\\d*")),
+
+      TRUE ~ NA_real_
+    )
+  )
+
+#step3: extract the second ingredient as there are combination antibiotics
+
+## ant2_mg = strength of the second active ingredient
+
+RX <- RX %>%
+  mutate(
+    ant2_mg = case_when(
+
+      strength_type %in% c("combo_mg",
+                           "combo_per_volume",
+                           "combo_12hr") ~
+
+        as.numeric(
+          str_extract(
+            strnt_desc,
+            "(?<=-)\\d+\\.?\\d*"
+          )
+        ),
+
+      TRUE ~ NA_real_
+    )
+  )
+
+#step4: extract volumes for suspensions/liquid
+
+## volume_ml = denominator after "/"
+
+RX <- RX %>%
+  mutate(
+    volume_ml = case_when(
+
+      strength_type %in% c("mg_per_volume",
+                           "combo_per_volume") ~
+
+        as.numeric(
+          str_extract(
+            strnt_desc,
+            "(?<=/)\\d+"
+          )
+        ),
+
+      strength_type == "mg_per_ml" ~ 1,
+
+      TRUE ~ NA_real_
+    )
+  )
+
+
+#then calculate the concentrations
+
+## mg per mL
+
+
+RX <- RX %>%
+  mutate(
+
+    ant1_mg_ml = case_when(
+
+      strength_type == "mg_per_volume" ~
+        ant1_mg / volume_ml,
+
+      strength_type == "combo_per_volume" ~
+        ant1_mg / volume_ml,
+
+      strength_type == "mg_per_ml" ~
+        ant1_mg,
+
+      TRUE ~ NA_real_
+    ),
+
+    ant2_mg_ml = case_when(
+
+      strength_type == "combo_per_volume" ~
+        ant2_mg / volume_ml,
+
+      TRUE ~ NA_real_
+    )
+
+  )
+
+#step5: extract release hours if it's the delayed release type
+## release_hours
+
+RX <- RX %>%
+  mutate(
+    release_hours = case_when(
+
+      str_detect(strnt_desc, "24HR") ~ 24,
+
+      str_detect(strnt_desc, "12HR") ~ 12,
+
+      TRUE ~ NA_real_
+    )
+  )
+
+#step6: calculate the estimated quantity dispensed, which makes the RX amount comparable within and between antibiotics
+
+## Estimate the number of tablets/capsules or mL dispensed
+
+
+RX <- RX %>%
+  mutate(
+
+    estimated_quantity = case_when(
+
+      strength_type %in%
+        c("single_mg",
+          "single_g",
+          "combo_mg") ~
+
+        rx_dosage_amt / ant1_mg,
+
+      strength_type == "mg_per_volume" ~
+
+        rx_dosage_amt / ant1_mg_ml,
+
+      strength_type == "combo_per_volume" ~
+
+        rx_dosage_amt / ant1_mg_ml,
+
+      strength_type == "mg_per_ml" ~
+
+        rx_dosage_amt / ant1_mg_ml,
+
+      TRUE ~ NA_real_
+
+    )
+
+  )
+```
+
+### !!find & flag
+
+```{r}
+#highest strength for each antibiotic
+RX <- RX %>%
+  group_by(unifm_prod_nm) %>%
+  mutate(
+    highest_strnt =
+      ant1_mg == max(ant1_mg, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+
+#unusually large quantity (top %5)
+RX <- RX %>%
+  group_by(unifm_prod_nm) %>%
+  mutate(
+    large_quantity =
+      estimated_quantity >
+      quantile(
+        estimated_quantity,
+        0.95,
+        na.rm = TRUE
+      )
+  ) %>%
+  ungroup()
+```
+
+
+
+### make the summary table
+
+```{r}
+summary_rx <-
+RX %>%
+group_by(unifm_prod_nm) %>%
+summarise(
+  n = n(),
+
+  median_rx =
+    median(rx_dosage_amt),
+
+  median_quantity =
+    median(estimated_quantity,na.rm = TRUE),
+
+  p95 =
+    quantile(
+      estimated_quantity,
+      0.95,
+      na.rm = TRUE),
+
+  max_quantity =
+    max(estimated_quantity),
+
+  prop_high_strength =
+    mean(highest_strnt, na.rm = TRUE),
+
+  prop_large_quantity =
+    mean(large_quantity, na.rm = TRUE)
+) %>%
+  arrange(desc(prop_large_quantity), by_group=TRUE)
+```
+
+
+
+### what factors are associated with stronger formulation?
+
+```{r}
+RX_filtered <- RX%>%
+  group_by(unifm_prod_nm, pri_spcl_desc) %>%
+  mutate(num = n()) %>%
+  ungroup() %>%
+  filter(num >50)
+
+RX_model <- RX_filtered %>%
+  group_by(unifm_prod_nm) %>%
+  filter(n_distinct(highest_strnt) == 2) %>%
+  ungroup()
+
+RX_model$pri_spcl_desc <- factor(RX_model$pri_spcl_desc)
+RX_model$provider_st_cd <- factor(RX_model$provider_st_cd)
+RX_model$dosage_form_nm <- factor(RX_model$dosage_form_nm)
+RX_model$strnt_desc <- factor(RX_model$strnt_desc)
+RX_model$highest_strnt <- factor(RX_model$highest_strnt)
+RX_model$unifm_prod_nm <- factor(RX_model$unifm_prod_nm)
+
+
+  
+unique(RX_filtered$unifm_prod_nm)
+
+
+RX_model$unifm_prod_nm <- relevel(RX_model$unifm_prod_nm, ref = "AMOXICILLIN")
+RX_model$provider_st_cd <- relevel(RX_model$provider_st_cd, ref = "NY")
+RX_model$dosage_form_nm <- relevel(RX_model$dosage_form_nm, ref = "TABLET")
+RX_model$pri_spcl_desc <- relevel(RX_model$pri_spcl_desc, ref = "NURSE PRACTITIONER")
+
+
+model_strength<- glm(
+  highest_strnt ~
+    unifm_prod_nm +
+    pat_age_nbr +
+    pri_spcl_desc +
+    provider_st_cd +
+    dosage_form_nm,
+  family = binomial,
+  data = RX_model
+)
+
+summary(model_strength)
+exp(coef(model_strength))
+```
+
+```{r}
+#for selecting ref
+RX_filtered %>%
+  group_by(provider_st_cd) %>%
+  summarize(count=n())%>%
+  arrange(desc(count))
+
+RX_filtered %>%
+  filter(unifm_prod_nm == "CLINDAMYCIN HCL")
+
+
+#for testing feasibility
+table(RX$highest_strnt)
+prop.table(table(RX$highest_strnt))
+```
+
+
+
+### what factors are associated with large prescription quantity?
+
+```{r}
+RX_filtered <- RX%>%
+  group_by(unifm_prod_nm, pri_spcl_desc) %>%
+  mutate(num = n()) %>%
+  ungroup() %>%
+  filter(num >50)
+
+RX_filtered$pri_spcl_desc <- factor(RX_filtered$pri_spcl_desc)
+RX_filtered$provider_st_cd <- factor(RX_filtered$provider_st_cd)
+RX_filtered$dosage_form_nm <- factor(RX_filtered$dosage_form_nm)
+
+  
+#unique(RX_filtered$unifm_prod_nm)
+
+amox <- RX_filtered %>%
+  filter(unifm_prod_nm == "AMOXICILLIN")
+
+amox$pri_spcl_desc <- relevel(amox$pri_spcl_desc, ref = "NURSE PRACTITIONER")
+amox$provider_st_cd <- relevel(amox$provider_st_cd, ref = "NY")
+amox$dosage_form_nm <- relevel(amox$dosage_form_nm, ref = "CAPSULE")
+
+
+model_amox <- glm(
+  estimated_quantity ~
+    pat_age_nbr +
+    pri_spcl_desc +
+    provider_st_cd +
+    dosage_form_nm,
+  family = Gamma(link = "log"),
+  data = amox
+)
+
+summary(model_amox)
+exp(coef(model_amox))
+
+#In the Gamma generalized linear model with a log link, patient age was positively associated with amoxicillin prescription quantity (β = 0.0025 per year, p < 0.001), corresponding to an approximately 0.25% increase in expected quantity for each additional year of age. Compared with nurse practitioners, dentists prescribed 17.9% larger quantities (exp(β) = 1.18, p < 0.001), oral and maxillofacial surgeons prescribed 13.8% larger quantities (exp(β) = 1.14, p < 0.001), and orthopedic surgeons prescribed 38.0% larger quantities (exp(β) = 1.38, p < 0.001). Differences for emergency medicine, family medicine, internal medicine, physician assistants, and pediatrics were not statistically significant after adjustment.
+```
+
+```{r}
+#for selecting ref
+RX %>%
+filter(unifm_prod_nm == "AMOXICILLIN") %>%
+  group_by(pri_spcl_desc) %>%
+  mutate(num = n()) %>%
+  ungroup() %>%
+  filter(num >50) %>%
+  ggplot(aes(x=unifm_prod_nm, y=rx_dosage_amt, color=dosage_form_nm))+
+  geom_boxplot(width=0.5)+
+  #facet_wrap(~ pri_spcl_desc)+
+  theme(axis.text=element_text(size=7),
+        strip.text = element_text(size = 7))+
+  labs(title = "Distribution of RX amount across prescribing conditions",
+       subtitle = "AMOXICILLIN")
+
+RX_filtered%>%
+  filter(unifm_prod_nm == "AMOXICILLIN") %>%
+  group_by(dosage_form_nm) %>%
+  summarize(count=n())
+```
+
+
+
+
+
+
+
+#Copayment
+
+## make insurance model categories!!
+
+```{r}
+copayment <- copayment %>%
+  mutate(insurance_type = case_when(
+           str_detect(model_typ_nm, "MEDICARE") ~ "Medicare",
+           str_detect(model_typ_nm, "MEDICAID") ~ "Medicaid",
+           str_detect(model_typ_cd, "HIX") ~ "Health Insurance Exchange",
+           str_detect(model_typ_cd, "PPO|EPO|POS|HMO|IPA|CDHP") ~ "Commercial Plans",
+           str_detect(model_typ_nm, "EMPLOYER") ~ "Employer-Sponsored",
+           str_detect(model_typ_nm, "FEDERAL|STATE") ~ "Government Employee Programs",
+           str_detect(model_typ_cd, "CASH|DISC|VOUCHER") ~ "Self-pay",
+           str_detect(model_typ_nm, "WORKER") ~ "Workers' Comp",
+           str_detect(model_typ_nm, "PBM|PHARMACY BENEFIT") ~ "Pharmacy Benefit Administration",
+           TRUE ~ "Other/Unspecified"
+         ))
+```
+
+```{r}
+copayment%>%
+  select(model_typ_cd, model_typ_nm, insurance_type) %>%
+  distinct()
+```
+
+```{r}
+is_outlier <- function(x) {
+return(x < quantile(x, 0.25) - 1.5 * IQR(x) | x > quantile(x, 0.75) + 1.5 * IQR(x))
+}
+copayment <- copayment %>%
+group_by(usc_lvl3_desc, age_cat) %>%
+mutate(outlier = ifelse(is_outlier(copay_amt), copay_amt, as.numeric(NA)))%>%
+  ungroup()
+```
+
+```{r}
+copayment %>%
+  filter(usc_lvl3_desc == "B-LACTAM, INCREASED ACTIVITY") %>%
+  ggplot(aes(x=age_cat, y=copay_amt, color=insurance_type))+
+  geom_boxplot(width=0.5)+
+  facet_wrap(~ unifm_prod_nm)+
+  theme(axis.text=element_text(size=7),
+        strip.text = element_text(size = 7))+
+  labs(title = "Distribution of copayment amounts by insurance plan model type across age groups",
+       subtitle = "B-LACTAM, INCREASED ACTIVITY")
+
+#look into the only antibiotic with copayment records
+copayment %>%
+  filter(usc_lvl3_desc == "B-LACTAM, INCREASED ACTIVITY",
+         outlier != is.na(outlier)) %>%
+  group_by(pri_spcl_desc) %>%
+  mutate(case=n())%>%
+  filter(case>5)%>%
+  ggplot(aes(x=age_cat, fill=insurance_type))+
+  geom_bar()+
+  facet_wrap(~pri_spcl_desc)+
+  labs(title = "Distribution of copayment outliers by prescription conditions across age groups",
+    subtitle="AMOXICILLIN & POT CLAVULANATE")
+
+```
+
+```{r}
+copayment %>%
+  group_by(unifm_prod_nm) %>%
+  mutate(num=n())%>%
+  filter(num>10)%>%
+  filter(usc_lvl3_desc == "ANTNFCT, BROAD/MEDIUM SPECTRUM") %>%
+  ggplot(aes(x=age_cat, y=copay_amt, color=insurance_type))+
+  geom_boxplot(width=0.5)+
+  facet_wrap(~ unifm_prod_nm)+
+  theme(axis.text=element_text(size=7),
+        strip.text = element_text(size = 7))+
+  labs(title = "Distribution of copayment amounts by insurance plan model type across age groups",
+       subtitle = "ANTNFCT, BROAD/MEDIUM SPECTRUM")
+
+#look into 5 antibiotics
+copayment %>%
+  filter(usc_lvl3_desc == "ANTNFCT, BROAD/MEDIUM SPECTRUM",
+         unifm_prod_nm == "DOXYCYCLINE (ROSACEA)",
+         outlier != is.na(outlier)) %>%
+  group_by(pri_spcl_desc) %>%
+  mutate(case=n())%>%
+  filter(case>5)%>%
+  ggplot(aes(x=age_cat, fill=insurance_type))+
+  geom_bar()+
+  facet_wrap(~pri_spcl_desc )+
+  labs(title = "Distribution of copayment outliers by prescription conditions across age groups",
+    subtitle="DOXYCYCLINE (ROSACEA)")
+
+copayment %>%
+  filter(usc_lvl3_desc == "ANTNFCT, BROAD/MEDIUM SPECTRUM",
+         unifm_prod_nm == "DOXYCYCLINE HYCLATE",
+         outlier != is.na(outlier)) %>%
+  group_by(pri_spcl_desc) %>%
+  mutate(case=n())%>%
+  filter(case>5)%>%
+  ggplot(aes(x=age_cat, fill=insurance_type))+
+  geom_bar()+
+  facet_wrap(~pri_spcl_desc )+
+  labs(title = "Distribution of copayment outliers by prescription conditions across age groups",
+    subtitle="DOXYCYCLINE HYCLATE")
+
+
+copayment %>%
+  filter(usc_lvl3_desc == "ANTNFCT, BROAD/MEDIUM SPECTRUM",
+         unifm_prod_nm == "MINOCYCLINE HCL",
+         outlier != is.na(outlier)) %>%
+  group_by(pri_spcl_desc) %>%
+  mutate(case=n())%>%
+  filter(case>5)%>%
+  ggplot(aes(x=age_cat, fill=insurance_type))+
+  geom_bar()+
+  facet_wrap(~pri_spcl_desc )+
+  labs(title = "Distribution of copayment outliers by prescription conditions across age groups",
+    subtitle="MINOCYCLINE HCL")
+
+copayment %>%
+  filter(usc_lvl3_desc == "ANTNFCT, BROAD/MEDIUM SPECTRUM",
+         unifm_prod_nm == "SARECYCLINE HCL",
+         outlier != is.na(outlier)) %>%
+  group_by(pri_spcl_desc) %>%
+  mutate(case=n())%>%
+  filter(case>5)%>%
+  ggplot(aes(x=age_cat, fill=insurance_type))+
+  geom_bar()+
+  facet_wrap(~pri_spcl_desc )+
+  labs(title = "Distribution of copayment outliers by prescription conditions across age groups",
+    subtitle="SARECYCLINE HCL")
+
+copayment %>%
+  filter(usc_lvl3_desc == "ANTNFCT, BROAD/MEDIUM SPECTRUM",
+         unifm_prod_nm == "VANCOMYCIN HCL",
+         outlier != is.na(outlier)) %>%
+  group_by(pri_spcl_desc) %>%
+  mutate(case=n())%>%
+  filter(case>5)%>%
+  ggplot(aes(x=age_cat, fill=insurance_type))+
+  geom_bar()+
+  facet_wrap(~pri_spcl_desc )+
+  labs(title = "Distribution of copayment outliers by prescription conditions across age groups",
+    subtitle="VANCOMYCIN HCL")
+
+```
+
+```{r}
+copayment %>%
+  group_by(unifm_prod_nm) %>%
+  mutate(num=n())%>%
+  filter(num>10)%>%
+  filter(usc_lvl3_desc == "SULFONAMIDES & TRIMETHOPRIM") %>%
+  ggplot(aes(x=age_cat, y=copay_amt, color=insurance_type))+
+  geom_boxplot(width=0.5)+
+  facet_wrap(~ unifm_prod_nm)+
+  theme(axis.text=element_text(size=7),
+        strip.text = element_text(size = 7))+
+  labs(title = "Distribution of copayment amounts by insurance plan model type across age groups",
+       subtitle = "SULFONAMIDES & TRIMETHOPRIM")
+
+copayment %>%
+  filter(usc_lvl3_desc == "SULFONAMIDES & TRIMETHOPRIM",
+         unifm_prod_nm == "SULFAMETHOXAZOLE-TRIMETHOPRIM",
+         outlier != is.na(outlier)) %>%
+  group_by(pri_spcl_desc) %>%
+  mutate(case=n())%>%
+  filter(case>5)%>%
+  ggplot(aes(x=age_cat, fill=insurance_type))+
+  geom_bar()+
+  facet_wrap(~pri_spcl_desc )+
+  labs(title = "Distribution of copayment outliers by prescription conditions across age groups",
+    subtitle="SULFAMETHOXAZOLE-TRIMETHOPRIM")
+
+```
+
+```{r}
+copayment %>%
+  group_by(unifm_prod_nm) %>%
+  mutate(num=n())%>%
+  filter(num>10)%>%
+  filter(usc_lvl3_desc == "OPHTHALMIC ANTI-INFECTIVES") %>%
+  ggplot(aes(x=age_cat, y=copay_amt, color=insurance_type))+
+  geom_boxplot(width=0.5)+
+  facet_wrap(~ unifm_prod_nm)+
+  theme(axis.text=element_text(size=7),
+        strip.text = element_text(size = 7))+
+  labs(title = "Distribution of copayment amounts by insurance plan model type across age groups",
+       subtitle = "OPHTHALMIC ANTI-INFECTIVES")
+
+copayment %>%
+  filter(usc_lvl3_desc == "OPHTHALMIC ANTI-INFECTIVES",
+         unifm_prod_nm == "OFLOXACIN (OPHTH)",
+         outlier != is.na(outlier)) %>%
+  group_by(pri_spcl_desc) %>%
+  mutate(case=n())%>%
+  filter(case>5)%>%
+  ggplot(aes(x=age_cat, fill=insurance_type))+
+  geom_bar()+
+  facet_wrap(~pri_spcl_desc )+
+  labs(title = "Distribution of copayment outliers by prescription conditions across age groups",
+    subtitle="OFLOXACIN (OPHTH)")
+
+```
+
+```{r}
+copayment %>%
+  group_by(unifm_prod_nm) %>%
+  mutate(num=n())%>%
+  filter(num>10)%>%
+  filter(usc_lvl3_desc == "OTIC ANTI-INFECTIVES") %>%
+  ggplot(aes(x=age_cat, y=copay_amt, color=insurance_type))+
+  geom_boxplot(width=0.5)+
+  facet_wrap(~ unifm_prod_nm)+
+  theme(axis.text=element_text(size=7),
+        strip.text = element_text(size = 7))+
+  labs(title = "Distribution of copayment amounts by insurance plan model type across age groups",
+       subtitle = "OTIC ANTI-INFECTIVES")
+
+```
+
+```{r}
+copayment %>%
+  group_by(unifm_prod_nm) %>%
+  mutate(num=n())%>%
+  filter(num>10)%>%
+  filter(usc_lvl3_desc == "VAGINAL ANTI-INFECTIVES") %>%
+  ggplot(aes(x=age_cat, y=copay_amt, color=insurance_type))+
+  geom_boxplot(width=0.5)+
+  facet_wrap(~ unifm_prod_nm)+
+  theme(axis.text=element_text(size=7),
+        strip.text = element_text(size = 7))+
+  labs(title = "Distribution of copayment amounts by insurance plan model type across age groups",
+       subtitle = "VAGINAL ANTI-INFECTIVES")
+
+```
+
+```{r}
+copayment %>%
+  group_by(unifm_prod_nm) %>%
+  mutate(num=n())%>%
+  filter(num>5)%>%
+  filter(usc_lvl3_desc == "ANTNFCT SYSTEMIC, OTHER") %>%
+  ggplot(aes(x=age_cat, y=copay_amt, color=insurance_type))+
+  geom_boxplot(width=0.5)+
+  facet_wrap(~ unifm_prod_nm)+
+  theme(axis.text=element_text(size=7),
+        strip.text = element_text(size = 7))+
+  labs(title = "Distribution of copayment amounts by insurance plan model type across age groups",
+       subtitle = "ANTNFCT SYSTEMIC, OTHER")
+```
+
+```{r}
+copayment %>%
+  group_by(unifm_prod_nm) %>%
+  mutate(num=n())%>%
+  filter(num>5)%>%
+  filter(usc_lvl3_desc == "OXAZOLIDINONES") %>%
+  ggplot(aes(x=age_cat, y=copay_amt, color=insurance_type))+
+  geom_boxplot(width=0.5)+
+  facet_wrap(~ unifm_prod_nm)+
+  theme(axis.text=element_text(size=7),
+        strip.text = element_text(size = 7))+
+  labs(title = "Distribution of copayment amounts by insurance plan model type across age groups",
+       subtitle = "OXAZOLIDINONES")
+```
