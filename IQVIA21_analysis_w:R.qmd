@@ -934,8 +934,6 @@ RX <- RX %>%
   ungroup()
 ```
 
-
-
 ### make the summary table
 
 ```{r}
@@ -968,8 +966,6 @@ summarise(
 ) %>%
   arrange(desc(prop_large_quantity), by_group=TRUE)
 ```
-
-
 
 ### what factors are associated with stronger formulation?
 
@@ -1034,8 +1030,6 @@ table(RX$highest_strnt)
 prop.table(table(RX$highest_strnt))
 ```
 
-
-
 ### what factors are associated with large prescription quantity?
 
 ```{r}
@@ -1097,12 +1091,6 @@ RX_filtered%>%
   group_by(dosage_form_nm) %>%
   summarize(count=n())
 ```
-
-
-
-
-
-
 
 #Copayment
 
