@@ -1094,7 +1094,7 @@ RX_filtered%>%
 
 #Copayment
 
-## make insurance model categories!!
+## !!make insurance model categories
 
 ```{r}
 copayment <- copayment %>%
@@ -1113,10 +1113,15 @@ copayment <- copayment %>%
 ```
 
 ```{r}
+# check the assignment of categories 
 copayment%>%
   select(model_typ_cd, model_typ_nm, insurance_type) %>%
-  distinct()
+  distinct() %>%
+  arrange(insurance_type)
 ```
+
+
+## Distribution of copayment and copayment outliers
 
 ```{r}
 is_outlier <- function(x) {
@@ -1139,7 +1144,7 @@ copayment %>%
   labs(title = "Distribution of copayment amounts by insurance plan model type across age groups",
        subtitle = "B-LACTAM, INCREASED ACTIVITY")
 
-#look into the only antibiotic with copayment records
+# only AMOXICILLIN & POT CLAVULANATE	is analyzable
 copayment %>%
   filter(usc_lvl3_desc == "B-LACTAM, INCREASED ACTIVITY",
          outlier != is.na(outlier)) %>%
@@ -1168,7 +1173,7 @@ copayment %>%
   labs(title = "Distribution of copayment amounts by insurance plan model type across age groups",
        subtitle = "ANTNFCT, BROAD/MEDIUM SPECTRUM")
 
-#look into 5 antibiotics
+#focus on 5 outstanding antibiotics
 copayment %>%
   filter(usc_lvl3_desc == "ANTNFCT, BROAD/MEDIUM SPECTRUM",
          unifm_prod_nm == "DOXYCYCLINE (ROSACEA)",
@@ -1251,6 +1256,7 @@ copayment %>%
   labs(title = "Distribution of copayment amounts by insurance plan model type across age groups",
        subtitle = "SULFONAMIDES & TRIMETHOPRIM")
 
+#SULFAMETHOXAZOLE-TRIMETHOPRIM has an outstanding amount of outliers
 copayment %>%
   filter(usc_lvl3_desc == "SULFONAMIDES & TRIMETHOPRIM",
          unifm_prod_nm == "SULFAMETHOXAZOLE-TRIMETHOPRIM",
@@ -1282,7 +1288,7 @@ copayment %>%
 
 copayment %>%
   filter(usc_lvl3_desc == "OPHTHALMIC ANTI-INFECTIVES",
-         unifm_prod_nm == "OFLOXACIN (OPHTH)",
+         unifm_prod_nm == "MOXIFLOXACIN HCL (OPHTH)",
          outlier != is.na(outlier)) %>%
   group_by(pri_spcl_desc) %>%
   mutate(case=n())%>%
@@ -1291,7 +1297,21 @@ copayment %>%
   geom_bar()+
   facet_wrap(~pri_spcl_desc )+
   labs(title = "Distribution of copayment outliers by prescription conditions across age groups",
-    subtitle="OFLOXACIN (OPHTH)")
+    subtitle="MOXIFLOXACIN HCL (OPHTH)")
+
+
+copayment %>%
+  filter(usc_lvl3_desc == "OPHTHALMIC ANTI-INFECTIVES",
+         unifm_prod_nm == "BESIFLOXACIN HCL",
+         outlier != is.na(outlier)) %>%
+  group_by(pri_spcl_desc) %>%
+  mutate(case=n())%>%
+  filter(case>5)%>%
+  ggplot(aes(x=age_cat, fill=insurance_type))+
+  geom_bar()+
+  facet_wrap(~pri_spcl_desc )+
+  labs(title = "Distribution of copayment outliers by prescription conditions across age groups",
+    subtitle="BESIFLOXACIN HCL")
 
 ```
 
@@ -1309,6 +1329,33 @@ copayment %>%
   labs(title = "Distribution of copayment amounts by insurance plan model type across age groups",
        subtitle = "OTIC ANTI-INFECTIVES")
 
+copayment %>%
+  filter(usc_lvl3_desc == "OTIC ANTI-INFECTIVES",
+         unifm_prod_nm == "CIPROFLOXACIN-DEXAMETHASONE",
+         outlier != is.na(outlier)) %>%
+  group_by(pri_spcl_desc) %>%
+  mutate(case=n())%>%
+  filter(case>5)%>%
+  ggplot(aes(x=age_cat, fill=insurance_type))+
+  geom_bar()+
+  facet_wrap(~pri_spcl_desc )+
+  labs(title = "Distribution of copayment outliers by prescription conditions across age groups",
+    subtitle="CIPROFLOXACIN-DEXAMETHASONE")
+
+
+copayment %>%
+  filter(usc_lvl3_desc == "OTIC ANTI-INFECTIVES",
+         unifm_prod_nm == "NEOMYCIN-POLYMYXIN-HC (OTIC)",
+         outlier != is.na(outlier)) %>%
+  group_by(pri_spcl_desc) %>%
+  mutate(case=n())%>%
+  filter(case>5)%>%
+  ggplot(aes(x=age_cat, fill=insurance_type))+
+  geom_bar()+
+  facet_wrap(~pri_spcl_desc )+
+  labs(title = "Distribution of copayment outliers by prescription conditions across age groups",
+    subtitle="NEOMYCIN-POLYMYXIN-HC (OTIC)")
+
 ```
 
 ```{r}
@@ -1325,6 +1372,20 @@ copayment %>%
   labs(title = "Distribution of copayment amounts by insurance plan model type across age groups",
        subtitle = "VAGINAL ANTI-INFECTIVES")
 
+
+copayment %>%
+  filter(usc_lvl3_desc == "VAGINAL ANTI-INFECTIVES",
+         unifm_prod_nm == "METRONIDAZOLE VAGINAL",
+         outlier != is.na(outlier)) %>%
+  group_by(pri_spcl_desc) %>%
+  mutate(case=n())%>%
+  filter(case>5)%>%
+  ggplot(aes(x=age_cat, fill=insurance_type))+
+  geom_bar()+
+  facet_wrap(~pri_spcl_desc )+
+  labs(title = "Distribution of copayment outliers by prescription conditions across age groups",
+    subtitle="METRONIDAZOLE VAGINAL")
+
 ```
 
 ```{r}
@@ -1340,6 +1401,8 @@ copayment %>%
         strip.text = element_text(size = 7))+
   labs(title = "Distribution of copayment amounts by insurance plan model type across age groups",
        subtitle = "ANTNFCT SYSTEMIC, OTHER")
+
+#no outliers
 ```
 
 ```{r}
@@ -1355,4 +1418,6 @@ copayment %>%
         strip.text = element_text(size = 7))+
   labs(title = "Distribution of copayment amounts by insurance plan model type across age groups",
        subtitle = "OXAZOLIDINONES")
+
+#only one outlier
 ```
