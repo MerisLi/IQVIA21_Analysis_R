@@ -974,7 +974,8 @@ RX_filtered <- RX%>%
   group_by(unifm_prod_nm, pri_spcl_desc) %>%
   mutate(num = n()) %>%
   ungroup() %>%
-  filter(num >50)
+  filter(num >50) 
+
 
 RX_model <- RX_filtered %>%
   group_by(unifm_prod_nm) %>%
@@ -1011,7 +1012,6 @@ model_strength<- glm(
 )
 
 summary(model_strength)
-exp(coef(model_strength))
 ```
 
 ```{r}
@@ -1023,12 +1023,32 @@ RX_filtered %>%
 
 RX_filtered %>%
   filter(unifm_prod_nm == "CLINDAMYCIN HCL")
+```
 
-
+```{r}
 #for testing feasibility
 table(RX$highest_strnt)
 prop.table(table(RX$highest_strnt))
+
+#for assess test quality
+summary(model_strength)$aic
+summary(model_strength)$deviance
+summary(model_strength)$null.deviance
+
+
+table(RX$highest_strnt)
+table(RX_model$unifm_prod_nm)
+table(RX_model$pri_spcl_desc)
+table(RX_model$provider_st_cd)
+table(RX_model$dosage_form_nm)
+
+
+summary(model_strength)$coefficients %>%
+  as.data.frame() %>%
+  filter(`Pr(>|z|)` < 0.05) 
 ```
+
+
 
 ### what factors are associated with large prescription quantity?
 
@@ -1066,8 +1086,6 @@ model_amox <- glm(
 
 summary(model_amox)
 exp(coef(model_amox))
-
-#In the Gamma generalized linear model with a log link, patient age was positively associated with amoxicillin prescription quantity (β = 0.0025 per year, p < 0.001), corresponding to an approximately 0.25% increase in expected quantity for each additional year of age. Compared with nurse practitioners, dentists prescribed 17.9% larger quantities (exp(β) = 1.18, p < 0.001), oral and maxillofacial surgeons prescribed 13.8% larger quantities (exp(β) = 1.14, p < 0.001), and orthopedic surgeons prescribed 38.0% larger quantities (exp(β) = 1.38, p < 0.001). Differences for emergency medicine, family medicine, internal medicine, physician assistants, and pediatrics were not statistically significant after adjustment.
 ```
 
 ```{r}
@@ -1091,6 +1109,26 @@ RX_filtered%>%
   group_by(dosage_form_nm) %>%
   summarize(count=n())
 ```
+
+```{r}
+#for assess test quality
+summary(model_amox)$aic
+summary(model_amox)$deviance
+summary(model_amox)$null.deviance
+
+table(amox$pri_spcl_desc)
+table(amox$provider_st_cd)
+table(amox$dosage_form_nm)
+
+
+summary(model_amox)$coefficients %>%
+  as.data.frame() %>%
+  filter(`Pr(>|z|)` < 0.05) 
+```
+
+
+
+
 
 #Copayment
 
@@ -1119,7 +1157,6 @@ copayment%>%
   distinct() %>%
   arrange(insurance_type)
 ```
-
 
 ## Distribution of copayment and copayment outliers
 
