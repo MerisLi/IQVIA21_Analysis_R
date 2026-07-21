@@ -13,4 +13,4 @@ Analytic tool: SQL Workbench (raw data) + R (visualization & stats)
 
 Data coverage: (Should) Span multiple outpatient healthcare settings 
 
-<img width="1584" height="1034" alt="image" src="https://github.com/user-attachments/assets/0ed0e25b-cbfe-4536-88a0-9a9cbcb7da2e" />
+<img width="2237" height="1145" alt="image" src="https://github.com/user-attachments/assets/d3fb8651-272f-44fe-b217-81d7791a148a" />
