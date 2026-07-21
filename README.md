@@ -12,3 +12,5 @@ Data source: iqvia21 - provided by Rob
 Analytic tool: SQL Workbench (raw data) + R (visualization & stats)
 
 Data coverage: (Should) Span multiple outpatient healthcare settings 
+
+<img width="1584" height="1034" alt="image" src="https://github.com/user-attachments/assets/0ed0e25b-cbfe-4536-88a0-9a9cbcb7da2e" />
