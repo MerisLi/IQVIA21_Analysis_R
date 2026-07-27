@@ -83,12 +83,14 @@ ggplot(patient_demographics, aes(x=age_cat, fill=age_cat))+
 ```
 
 ## !!make top used antibiotic groups within each category
+
 ```{r}
 patient_demographics %>%
   group_by(usc_lvl3_desc) %>%
   summarise(n = n_distinct(unifm_prod_nm))%>%
   arrange(desc(n))
 ```
+
 ```{r}
 top_prod <- patient_demographics %>%
   filter(usc_lvl3_desc == "ANTNFCT SYSTEMIC, OTHER") %>%
@@ -162,6 +164,7 @@ top_prod <- patient_demographics %>%
   slice_head(n=5) 
 vaginal<-top_prod$unifm_prod_nm
 ```
+
 ```{r}
 top_prescribed <- list(antnfct_systemic, antnfct_broad, b_lactam, ophthalmic, otic, oxazolidinones, sulf_trim, vaginal)
 
@@ -169,8 +172,6 @@ for (i in seq_along(top_prescribed)) {
   cat(paste(top_prescribed[[i]], collapse = ", "), "\n")
 }
 ```
-
-
 
 ##draw graph by antibiotics
 
@@ -271,9 +272,6 @@ ggplot(aes(x=age_cat, y=sum(n), fill=age_cat))+
        y="count",
        fill="Age Category")
 ```
-
-
-
 
 #Usage
 
@@ -1055,7 +1053,7 @@ unique(RX_filtered$unifm_prod_nm)
 
 
 RX_model$unifm_prod_nm <- relevel(RX_model$unifm_prod_nm, ref = "AMOXICILLIN")
-RX_model$provider_st_cd <- relevel(RX_model$provider_st_cd, ref = "NY")
+RX_model$provider_st_cd <- relevel(RX_model$provider_st_cd, ref = "TX")
 RX_model$dosage_form_nm <- relevel(RX_model$dosage_form_nm, ref = "TABLET")
 RX_model$pri_spcl_desc <- relevel(RX_model$pri_spcl_desc, ref = "NURSE PRACTITIONER")
 
