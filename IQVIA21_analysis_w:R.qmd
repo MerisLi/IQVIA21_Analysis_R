@@ -9,6 +9,7 @@ library(dplyr)
 library(readr)
 library(ggplot2)
 library(tidyverse)
+library(DHARMa)
 ```
 
 # !!import data
@@ -1106,6 +1107,26 @@ summary(model_strength)$coefficients %>%
   filter(`Pr(>|z|)` < 0.05) 
 ```
 
+```{r}
+#DHARMa
+
+strength_test <- simulateResiduals(fittedModel = model_strength)
+plot(strength_test)
+
+## The red line in the QQ plot is on the diagonal
+plotQQunif(strength_test) 
+
+
+testDispersion (strength_test)
+## The model has an ideal dispersion ratio (0.98507), which means it underestimates the variance by only ~1.5%, and there is no evidence (p>0.05) of seeing that deviation.
+
+
+```
+
+
+
+
+
 ### what factors are associated with large prescription quantity?
 
 ```{r}
@@ -1181,6 +1202,19 @@ summary(model_amox)$coefficients %>%
   as.data.frame() %>%
   filter(`Pr(>|z|)` < 0.05) 
 ```
+
+```{r}
+#DHARMa
+
+quantity_test <- simulateResiduals(fittedModel = model_amox)
+plot(quantity_test)
+
+testDispersion (quantity_test)
+
+
+```
+
+
 
 #Copayment
 
