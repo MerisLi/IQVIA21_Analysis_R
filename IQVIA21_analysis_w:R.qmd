@@ -10,6 +10,7 @@ library(readr)
 library(ggplot2)
 library(tidyverse)
 library(DHARMa)
+library(scales)
 ```
 
 # !!import data
@@ -75,12 +76,18 @@ copayment <- unfiltered %>%
 ##draw graph by antibiotic category
 
 ```{r}
-ggplot(patient_demographics, aes(x=age_cat, fill=age_cat))+
-  geom_bar()+
+patient_demographics %>%
+  group_by(usc_lvl3_desc, age_cat) %>%        
+  summarise(total_n = sum(n), .groups = "drop") %>% 
+  ggplot(aes(x = age_cat, y = total_n, fill = age_cat)) +
+  geom_col() +
   facet_wrap(vars(usc_lvl3_desc))+
+  scale_y_log10(labels = comma)+
   labs(title = "Patient Demographics, by age",
        x="Age Category",
+       y="#Prescriptions",
        fill="Age Category")
+
 ```
 
 ## !!make top used antibiotic groups within each category
@@ -167,6 +174,7 @@ vaginal<-top_prod$unifm_prod_nm
 ```
 
 ```{r}
+#make a list of names
 top_prescribed <- list(antnfct_systemic, antnfct_broad, b_lactam, ophthalmic, otic, oxazolidinones, sulf_trim, vaginal)
 
 for (i in seq_along(top_prescribed)) {
@@ -178,10 +186,11 @@ for (i in seq_along(top_prescribed)) {
 
 ```{r}
 patient_demographics %>%
-  filter(unifm_prod_nm == antnfct_systemic) %>%
-  group_by(unifm_prod_nm) %>%
-ggplot(aes(x=age_cat, y=sum(n), fill=age_cat))+
-  geom_col()+
+  filter(unifm_prod_nm %in% antnfct_systemic) %>%
+  group_by(unifm_prod_nm, age_cat) %>%        
+  summarise(total_n = sum(n),.groups = "drop") %>% 
+  ggplot(aes(x = age_cat, y = total_n, fill = age_cat)) +
+  geom_col(position = "dodge")+
   facet_wrap(vars(unifm_prod_nm))+
   labs(title = "Patient Demographics, by age",
        subtitle = "Top 5 prescribed [Systemic Antibiotics]",
@@ -189,11 +198,13 @@ ggplot(aes(x=age_cat, y=sum(n), fill=age_cat))+
        y="count",
        fill="Age Category")
 
+
 patient_demographics %>%
   filter(unifm_prod_nm == antnfct_broad) %>%
-  group_by(unifm_prod_nm) %>%
-ggplot(aes(x=age_cat, y=sum(n), fill=age_cat))+
-  geom_col()+
+  group_by(unifm_prod_nm, age_cat) %>%        
+  summarise(total_n = sum(n),.groups = "drop") %>% 
+  ggplot(aes(x = age_cat, y = total_n, fill = age_cat)) +
+  geom_col(position = "dodge")+
   facet_wrap(vars(unifm_prod_nm))+
   labs(title = "Patient Demographics, by age",
        subtitle = "Top 5 prescribed [Broad/Medium-Spectrum Antibiotics]",
@@ -203,9 +214,10 @@ ggplot(aes(x=age_cat, y=sum(n), fill=age_cat))+
 
 patient_demographics %>%
   filter(unifm_prod_nm == b_lactam) %>%
-  group_by(unifm_prod_nm) %>%
-ggplot(aes(x=age_cat, y=sum(n), fill=age_cat))+
-  geom_col()+
+  group_by(unifm_prod_nm, age_cat) %>%        
+  summarise(total_n = sum(n),.groups = "drop") %>% 
+  ggplot(aes(x = age_cat, y = total_n, fill = age_cat)) +
+  geom_col(position = "dodge")+
   facet_wrap(vars(unifm_prod_nm))+
   labs(title = "Patient Demographics, by age",
        subtitle = "Top 5 prescribed [Beta-Lactam, Increased Activity]",
@@ -215,9 +227,10 @@ ggplot(aes(x=age_cat, y=sum(n), fill=age_cat))+
 
 patient_demographics %>%
   filter(unifm_prod_nm == ophthalmic) %>%
-  group_by(unifm_prod_nm) %>%
-ggplot(aes(x=age_cat, y=sum(n), fill=age_cat))+
-  geom_col()+
+  group_by(unifm_prod_nm, age_cat) %>%        
+  summarise(total_n = sum(n),.groups = "drop") %>% 
+  ggplot(aes(x = age_cat, y = total_n, fill = age_cat)) +
+  geom_col(position = "dodge")+
   facet_wrap(vars(unifm_prod_nm))+
   labs(title = "Patient Demographics, by age",
        subtitle = "Top 5 prescribed [Ophthalmic Anti-Infectives]",
@@ -227,9 +240,10 @@ ggplot(aes(x=age_cat, y=sum(n), fill=age_cat))+
 
 patient_demographics %>%
   filter(unifm_prod_nm == otic) %>%
-  group_by(unifm_prod_nm) %>%
-ggplot(aes(x=age_cat, y=sum(n), fill=age_cat))+
-  geom_col()+
+  group_by(unifm_prod_nm, age_cat) %>%        
+  summarise(total_n = sum(n),.groups = "drop") %>% 
+  ggplot(aes(x = age_cat, y = total_n, fill = age_cat)) +
+  geom_col(position = "dodge")+
   facet_wrap(vars(unifm_prod_nm))+
   labs(title = "Patient Demographics, by age",
        subtitle = "Top 5 prescribed [Otic Anti-Infectives]",
@@ -239,9 +253,10 @@ ggplot(aes(x=age_cat, y=sum(n), fill=age_cat))+
 
 patient_demographics %>%
   filter(unifm_prod_nm == oxazolidinones) %>%
-  group_by(unifm_prod_nm) %>%
-ggplot(aes(x=age_cat, y=sum(n), fill=age_cat))+
-  geom_col()+
+  group_by(unifm_prod_nm, age_cat) %>%        
+  summarise(total_n = sum(n),.groups = "drop") %>% 
+  ggplot(aes(x = age_cat, y = total_n, fill = age_cat)) +
+  geom_col(position = "dodge")+
   facet_wrap(vars(unifm_prod_nm))+
   labs(title = "Patient Demographics, by age",
        subtitle = "Top 5 prescribed [Oxazolidinones]",
@@ -251,9 +266,10 @@ ggplot(aes(x=age_cat, y=sum(n), fill=age_cat))+
 
 patient_demographics %>%
   filter(unifm_prod_nm == sulf_trim) %>%
-  group_by(unifm_prod_nm) %>%
-ggplot(aes(x=age_cat, y=sum(n), fill=age_cat))+
-  geom_col()+
+  group_by(unifm_prod_nm, age_cat) %>%        
+  summarise(total_n = sum(n),.groups = "drop") %>% 
+  ggplot(aes(x = age_cat, y = total_n, fill = age_cat)) +
+  geom_col(position = "dodge")+
   facet_wrap(vars(unifm_prod_nm))+
   labs(title = "Patient Demographics, by age",
        subtitle = "Top 5 prescribed [Sulfamethoxazole-Trimethoprim Combination]",
@@ -263,9 +279,10 @@ ggplot(aes(x=age_cat, y=sum(n), fill=age_cat))+
 
 patient_demographics %>%
   filter(unifm_prod_nm == vaginal) %>%
-  group_by(unifm_prod_nm) %>%
-ggplot(aes(x=age_cat, y=sum(n), fill=age_cat))+
-  geom_col()+
+  group_by(unifm_prod_nm, age_cat) %>%        
+  summarise(total_n = sum(n),.groups = "drop") %>% 
+  ggplot(aes(x = age_cat, y = total_n, fill = age_cat)) +
+  geom_col(position = "dodge")+
   facet_wrap(vars(unifm_prod_nm))+
   labs(title = "Patient Demographics, by age",
        subtitle = "Top 5 prescribed [Vaginal Anti-Infectives]",
@@ -1123,10 +1140,6 @@ testDispersion (strength_test)
 
 ```
 
-
-
-
-
 ### what factors are associated with large prescription quantity?
 
 ```{r}
@@ -1213,8 +1226,6 @@ testDispersion (quantity_test)
 
 
 ```
-
-
 
 #Copayment
 
