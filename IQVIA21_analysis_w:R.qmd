@@ -7,6 +7,7 @@ editor: visual
 ```{r}
 library(dplyr)
 library(readr)
+library(ggrepel)
 library(ggplot2)
 library(tidyverse)
 library(DHARMa)
@@ -22,11 +23,17 @@ usage <- read_csv("Q.usage.csv")
 usage <- usage %>%
   filter_at(vars(antibiotic_name, dosage_form, provider_description), all_vars(!is.na(.)))
 
+usage_full <- read_csv("Q.usage_with age.csv")
+usage_full <- usage_full %>%
+  filter_at(vars(antibiotic_name, patient_age, provider_description), all_vars(!is.na(.)))
+
+
+
 unfiltered <- read_csv("Q.unfiltered100k_1.csv")
 unfiltered <- unfiltered
   #na.omit()
 
-#*add age group___
+###*add age group
 patient_demographics <- patient_demographics %>%
   filter (pat_age_nbr >=0) %>%
   mutate(age_cat = case_when(
@@ -43,7 +50,17 @@ filter (pat_age_nbr >=0) %>%
   TRUE ~ "Adults"
   ))
 
-###___
+
+usage_full <- usage_full %>%
+  filter (patient_age >=0) %>%
+  mutate(age_cat = case_when(
+  patient_age < 18 ~ "Pediatrics",
+  patient_age >= 65 ~ "Elders",
+  TRUE ~ "Adults"
+  ))
+
+
+###
 
 RX <- unfiltered %>%
   select(usc_lvl3_desc,
@@ -330,182 +347,179 @@ ggplot(aes(provider_description,
   )
 ```
 
-##draw bar graphs
+##bar graphs: Distribution of Prescriptions by Provider and Age
 
 ```{r}
-#bar
-usage %>%
-  filter(antibiotic_name  %in%  antnfct_systemic,
-         count >10)%>%
-ggplot(aes(x = provider_description,
-           y = count,
-           fill = dosage_form)) +
-  geom_col(position = "stack") +
-  coord_flip()+
-  geom_text(aes(label = count), vjust = -0.2)+
-  #facet_wrap(~ antibiotic_name)+
-  labs(title = "Distribution of Prescriptions by Provider and Dosage",
-    subtitle = "ANTNFCT SYSTEMIC, OTHER")
+usage_new <- usage_full %>%
+  group_by(antibiotic_name, provider_description, age_cat) %>%
+  summarise(total=sum(count), .groups = "drop") %>%
+  group_by(antibiotic_name, provider_description)%>%
+  mutate(whatever=sum(total))
 
 ```
 
 ```{r}
-usage %>%
-  filter(antibiotic_name  %in%  antnfct_broad,
-         count >10)%>%
+usage_new %>%
+  filter(antibiotic_name  %in%  antnfct_systemic)%>%
   group_by(antibiotic_name) %>%
-  slice_max(n=10,
-            order_by = count) %>%
+  mutate(rank = dense_rank(desc(whatever))) %>%   
+  filter(rank <= 10) %>%          
+  ungroup()%>%
 ggplot(aes(x = provider_description,
-           y = count,
-           fill = dosage_form)) +
+           y = total,
+           fill = age_cat)) +
+  geom_col(position = "stack") +
+  coord_flip()+
+  theme(axis.text.y = element_text(size = 6))+
+  facet_wrap(~ antibiotic_name)+
+  labs(title = "Distribution of Prescriptions by Provider and Age",
+    subtitle = "ANTNFCT SYSTEMIC, OTHER",
+    y="Prescription Volume",
+    x="Provider",
+    fill="Age Category")
+
+
+usage_new %>%
+  filter(antibiotic_name  %in%  antnfct_broad)%>%
+  group_by(antibiotic_name) %>%
+  mutate(rank = dense_rank(desc(whatever))) %>%   
+  filter(rank <= 10) %>%          
+  ungroup()%>%
+ggplot(aes(x = provider_description,
+           y = total,
+           fill=age_cat)) +
   geom_col(position = "stack") +
   coord_flip() +
-  facet_wrap(~ antibiotic_name) + 
-  geom_text_repel(
-    aes(label = count),
-    position = position_stack(vjust = 0.3),
-    size = 3)+
-  labs(title = "Distribution of Prescriptions by Provider and Dosage",
-    subtitle ="ANTNFCT, BROAD/MEDIUM SPECTRUM")
+  facet_wrap(~ antibiotic_name)+
+  theme(axis.text.y = element_text(size = 6))+
+  labs(title = "Distribution of Prescriptions by Provider and Age",
+    subtitle ="ANTNFCT, BROAD/MEDIUM SPECTRUM",
+     y="Prescription Volume",
+    x="Provider",
+    fill="Age Category")
 
-#if i stack all antibiotics together and only focus on the condition:
-usage %>%
-  filter(antibiotic_name  %in%  antnfct_broad,
-         count >10)%>%
+
+
+usage_new %>%
+  filter(antibiotic_name  %in%  b_lactam)%>%
   group_by(antibiotic_name) %>%
-  slice_max(n=10,
-            order_by = count) %>%
+  mutate(rank = dense_rank(desc(whatever))) %>%   
+  filter(rank <= 10) %>%          
+  ungroup()%>%
 ggplot(aes(x = provider_description,
-           y = count,
-           fill = dosage_form)) +
+           y = total,
+           fill=age_cat)) +
   geom_col(position = "stack") +
   coord_flip() +
-  labs(title = "Distribution of Prescriptions by Provider and Dosage",
-    subtitle ="ANTNFCT, BROAD/MEDIUM SPECTRUM")
-
-
-```
-
-```{r}
-usage %>%
-  filter(antibiotic_name  %in%  b_lactam,
-         count >10)%>%
-  group_by(antibiotic_name) %>%
-  slice_max(n=10,
-            order_by = count) %>%
-  ggplot(aes(x = provider_description,
-           y = count,
-           fill = dosage_form)) +
-  geom_col(position = "stack") +
-  coord_flip()+
   facet_wrap(~ antibiotic_name)+
-  geom_text(
-    aes(label = count),
-    position = position_stack(vjust = 0.5),
-    size = 3)+
-  labs(title = "Distribution of Prescriptions by Provider and Dosage",
-    subtitle ="B-LACTAM, INCREASED ACTIVITY")
+  theme(axis.text.y = element_text(size = 6))+
+  labs(title = "Distribution of Prescriptions by Provider and Age",
+    subtitle ="B-LACTAM, INCREASED ACTIVITY",
+     y="Prescription Volume",
+    x="Provider",
+    fill="Age Category")
 
 
-usage %>%
-  filter(antibiotic_name  %in%  ophthalmic,
-         count >10)%>%
+usage_new %>%
+  filter(antibiotic_name  %in%  sulf_trim)%>%
   group_by(antibiotic_name) %>%
-  slice_max(n=10,
-            order_by = count) %>%
-  ggplot(aes(x = provider_description,
-           y = count,
-           fill = dosage_form)) +
+  mutate(rank = dense_rank(desc(whatever))) %>%   
+  filter(rank <= 10) %>%          
+  ungroup()%>%
+ggplot(aes(x = provider_description,
+           y = total,
+           fill=age_cat)) +
   geom_col(position = "stack") +
-  coord_flip()+
-  facet_wrap(~ antibiotic_name) +
-  geom_text(
-    aes(label = count),
-    position = position_stack(vjust = 0.5),
-    size = 3)+
-  labs(title = "Distribution of Prescriptions by Provider and Dosage",
-    subtitle ="OPHTHALMIC ANTI-INFECTIVES")
-
-
-usage %>%
-  filter(antibiotic_name  %in%  otic,
-         count >10)%>%
-  group_by(antibiotic_name) %>%
-  slice_max(n=10,
-            order_by = count) %>%
-  ggplot(aes(x = provider_description,
-           y = count,
-           fill = dosage_form)) +
-  geom_col(position = "stack") +
-  coord_flip()+
+  coord_flip() +
   facet_wrap(~ antibiotic_name)+
-  geom_text(
-    aes(label = count),
-    position = position_stack(vjust = 0.5),
-    size = 3)+
-  labs(title = "Distribution of Prescriptions by Provider and Dosage",
-    subtitle = "OTIC ANTI-INFECTIVES")
+  theme(axis.text.y = element_text(size = 6))+
+  labs(title = "Distribution of Prescriptions by Provider and Age",
+    subtitle ="SULFONAMIDES & TRIMETHOPRIM",
+     y="Prescription Volume",
+    x="Provider",
+    fill="Age Category")
 
 
-usage %>%
-  filter(antibiotic_name  %in%  oxazolidinones,
-         count >10)%>%
+
+usage_new %>%
+  filter(antibiotic_name  %in%  ophthalmic)%>%
   group_by(antibiotic_name) %>%
-  slice_max(n=10,
-            order_by = count) %>%
-  ggplot(aes(x = provider_description,
-           y = count,
-           fill = dosage_form)) +
+  mutate(rank = dense_rank(desc(whatever))) %>%   
+  filter(rank <= 10) %>%          
+  ungroup()%>%
+ggplot(aes(x = provider_description,
+           y = total,
+           fill=age_cat)) +
   geom_col(position = "stack") +
-  coord_flip()+
+  coord_flip() +
   facet_wrap(~ antibiotic_name)+
-  geom_text(
-    aes(label = count),
-    position = position_stack(vjust = 0.5),
-    size = 3) +
-  labs(title = "Distribution of Prescriptions by Provider and Dosage",
-    subtitle = "OXAZOLIDINONES")
+  theme(axis.text.y = element_text(size = 6))+
+  labs(title = "Distribution of Prescriptions by Provider and Age",
+    subtitle ="OPHTHALMIC ANTI-INFECTIVES",
+     y="Prescription Volume",
+    x="Provider",
+    fill="Age Category")
 
 
-usage %>%
-  filter(antibiotic_name  %in%  sulf_trim,
-         count >10)%>%
+usage_new %>%
+  filter(antibiotic_name  %in%  otic)%>%
   group_by(antibiotic_name) %>%
-  slice_max(n=10,
-            order_by = count) %>%
-  ggplot(aes(x = provider_description,
-           y = count,
-           fill = dosage_form)) +
+  mutate(rank = dense_rank(desc(whatever))) %>%   
+  filter(rank <= 10) %>%          
+  ungroup()%>%
+ggplot(aes(x = provider_description,
+           y = total,
+           fill=age_cat)) +
   geom_col(position = "stack") +
-  coord_flip()+
+  coord_flip() +
   facet_wrap(~ antibiotic_name)+
-  geom_text(
-    aes(label = count),
-    position = position_stack(vjust = 0.5),
-    size = 3) +
-  labs(title = "Distribution of Prescriptions by Provider and Dosage",
-    subtitle = "SULFONAMIDES & TRIMETHOPRIM")
+  theme(axis.text.y = element_text(size = 6))+
+  labs(title = "Distribution of Prescriptions by Provider and Age",
+    subtitle ="OTIC ANTI-INFECTIVES",
+     y="Prescription Volume",
+    x="Provider",
+    fill="Age Category")
 
 
-usage %>%
-  filter(antibiotic_name  %in%  vaginal,
-         count >10)%>%
+usage_new %>%
+  filter(antibiotic_name  %in%  vaginal)%>%
   group_by(antibiotic_name) %>%
-  slice_max(n=10,
-            order_by = count) %>%
-  ggplot(aes(x = provider_description,
-           y = count,
-           fill = dosage_form)) +
+  mutate(rank = dense_rank(desc(whatever))) %>%   
+  filter(rank <= 10) %>%          
+  ungroup()%>%
+ggplot(aes(x = provider_description,
+           y = total,
+           fill=age_cat)) +
   geom_col(position = "stack") +
-  coord_flip()+
-  facet_wrap(~ antibiotic_name) +
-  geom_text_repel(
-    aes(label = count),
-    position = position_stack(vjust = 0.5),
-    size = 3) +
-  labs(title = "Distribution of Prescriptions by Provider and Dosage",
-    subtitle = "VAGINAL ANTI-INFECTIVES")
+  coord_flip() +
+  facet_wrap(~ antibiotic_name)+
+  theme(axis.text.y = element_text(size = 6))+
+  labs(title = "Distribution of Prescriptions by Provider and Age",
+    subtitle ="VAGINAL ANTI-INFECTIVES",
+     y="Prescription Volume",
+    x="Provider",
+    fill="Age Category")
+
+
+usage_new %>%
+  filter(antibiotic_name  %in%  oxazolidinones)%>%
+  group_by(antibiotic_name) %>%
+  mutate(rank = dense_rank(desc(whatever))) %>%   
+  filter(rank <= 10) %>%          
+  ungroup()%>%
+ggplot(aes(x = provider_description,
+           y = total,
+           fill=age_cat)) +
+  geom_col(position = "stack") +
+  coord_flip() +
+  facet_wrap(~ antibiotic_name)+
+  theme(axis.text.y = element_text(size = 6))+
+  labs(title = "Distribution of Prescriptions by Provider and Age",
+    subtitle ="OXAZOLIDINONES",
+     y="Prescription Volume",
+    x="Provider",
+    fill="Age Category")
+
 ```
 
 #RX
