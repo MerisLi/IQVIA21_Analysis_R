@@ -347,6 +347,155 @@ ggplot(aes(provider_description,
   )
 ```
 
+##bar graphs: Distribution of Prescriptions by Provider (general)
+
+```{r}
+usage %>%
+  filter(antibiotic_name  %in%  antnfct_systemic)%>%
+  group_by(provider_description) %>%
+  summarise(total=sum(count)) %>%
+  slice_max(n=10,
+            order_by = total)%>%
+ggplot(aes(x = reorder(provider_description, -total),
+           y = total,
+           fill=provider_description)) +
+  geom_col() +
+  coord_flip()+
+  theme(axis.text.y = element_text(size = 6))+
+  labs(title = "A General Picture of Prescriptions -- Top 5 Providers",
+    subtitle = "ANTNFCT SYSTEMIC, OTHER",
+    y="Prescription Volume",
+    x="Provider")
+
+
+usage %>%
+  filter(antibiotic_name  %in%  antnfct_broad)%>%
+  group_by(provider_description) %>%
+  summarise(total=sum(count)) %>%
+  slice_max(n=10,
+            order_by = total)%>%
+ggplot(aes(x = reorder(provider_description, -total),
+           y = total,
+           fill=provider_description)) +
+  geom_col() +
+  coord_flip()+
+  theme(axis.text.y = element_text(size = 6))+
+  labs(title = "A General Picture of Prescriptions -- Top 5 Providers",
+    subtitle = "ANTNFCT, BROAD/MEDIUM SPECTRUM",
+    y="Prescription Volume",
+    x="Provider")
+
+
+
+usage %>%
+  filter(antibiotic_name  %in%  b_lactam)%>%
+  group_by(provider_description) %>%
+  summarise(total=sum(count)) %>%
+  slice_max(n=10,
+            order_by = total)%>%
+ggplot(aes(x = reorder(provider_description, -total),
+           y = total,
+           fill=provider_description)) +
+  geom_col() +
+  coord_flip()+
+  theme(axis.text.y = element_text(size = 6))+
+  labs(title = "A General Picture of Prescriptions -- Top 5 Providers",
+    subtitle = "B-LACTAM, INCREASED ACTIVITY",
+    y="Prescription Volume",
+    x="Provider")
+
+
+usage %>%
+  filter(antibiotic_name  %in%  sulf_trim)%>%
+  group_by(provider_description) %>%
+  summarise(total=sum(count)) %>%
+  slice_max(n=10,
+            order_by = total)%>%
+ggplot(aes(x = reorder(provider_description, -total),
+           y = total,
+           fill=provider_description)) +
+  geom_col() +
+  coord_flip()+
+  theme(axis.text.y = element_text(size = 6))+
+  labs(title = "A General Picture of Prescriptions -- Top 5 Providers",
+    subtitle = "SULFONAMIDES & TRIMETHOPRIM ",
+    y="Prescription Volume",
+    x="Provider")
+
+
+usage %>%
+  filter(antibiotic_name  %in%  ophthalmic)%>%
+  group_by(provider_description) %>%
+  summarise(total=sum(count)) %>%
+  slice_max(n=10,
+            order_by = total)%>%
+ggplot(aes(x = reorder(provider_description, -total),
+           y = total,
+           fill=provider_description)) +
+  geom_col() +
+  coord_flip()+
+  theme(axis.text.y = element_text(size = 6))+
+  labs(title = "A General Picture of Prescriptions -- Top 5 Providers",
+    subtitle = "OPHTHALMIC ANTI-INFECTIVES",
+    y="Prescription Volume",
+    x="Provider")
+
+
+usage %>%
+  filter(antibiotic_name  %in%  otic)%>%
+  group_by(provider_description) %>%
+  summarise(total=sum(count)) %>%
+  slice_max(n=10,
+            order_by = total)%>%
+ggplot(aes(x = reorder(provider_description, -total),
+           y = total,
+           fill=provider_description)) +
+  geom_col() +
+  coord_flip()+
+  theme(axis.text.y = element_text(size = 6))+
+  labs(title = "A General Picture of Prescriptions -- Top 5 Providers",
+    subtitle = "OTIC ANTI-INFECTIVES",
+    y="Prescription Volume",
+    x="Provider")
+
+
+usage %>%
+  filter(antibiotic_name  %in%  oxazolidinones)%>%
+  group_by(provider_description) %>%
+  summarise(total=sum(count)) %>%
+  slice_max(n=10,
+            order_by = total)%>%
+ggplot(aes(x = reorder(provider_description, -total),
+           y = total,
+           fill=provider_description)) +
+  geom_col() +
+  coord_flip()+
+  theme(axis.text.y = element_text(size = 6))+
+  labs(title = "A General Picture of Prescriptions -- Top 5 Providers",
+    subtitle = "OXAZOLIDINONES ",
+    y="Prescription Volume",
+    x="Provider")
+
+
+
+usage %>%
+  filter(antibiotic_name  %in%  vaginal)%>%
+  group_by(provider_description) %>%
+  summarise(total=sum(count)) %>%
+  slice_max(n=10,
+            order_by = total)%>%
+ggplot(aes(x = reorder(provider_description, -total),
+           y = total,
+           fill=provider_description)) +
+  geom_col() +
+  coord_flip()+
+  theme(axis.text.y = element_text(size = 6))+
+  labs(title = "A General Picture of Prescriptions -- Top 5 Providers",
+    subtitle = "VAGINAL ANTI-INFECTIVES ",
+    y="Prescription Volume",
+    x="Provider")
+```
+
 ##bar graphs: Distribution of Prescriptions by Provider and Age
 
 ```{r}

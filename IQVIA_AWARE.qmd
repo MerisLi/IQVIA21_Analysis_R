@@ -1,0 +1,295 @@
+---
+title: "IQVIA_AWaRe"
+format: html
+editor: visual
+---
+
+# WHO AWaRe
+
+WHO introduced the AWaRe classification as part of the 2017 essential medicines list, as an antimicrobial stewardship tool to assist countries, territories and areas (CTAs) in their efforts toward optimizing antimicrobial use. Antibiotics are classified into three groups, Access, Watch and Reserve, considering the impact of different antibiotics and antibiotic classes on antimicrobial resistance, to emphasize the importance of their appropriate use.
+
+```{r}
+library(dplyr)
+library(readr)
+library(readxl)
+library(ggrepel)
+library(ggplot2)
+library(tidyverse)
+library(DHARMa)
+library(scales)
+```
+
+# !!import IQVIA data
+
+```{r}
+#RX needed for extracting prescription records
+unfiltered <- read_csv("Q.unfiltered100k_1.csv")
+unfiltered <- unfiltered %>%
+filter (pat_age_nbr >=0) %>%
+  mutate(age_cat = case_when(
+  pat_age_nbr < 18 ~ "Pediatrics",
+  pat_age_nbr >= 65 ~ "Elders",
+  TRUE ~ "Adults"
+  ))
+
+RX <- unfiltered %>%
+  select(usc_lvl3_desc,
+    unifm_prod_nm,
+    pat_age_nbr,
+    rx_dosage_amt,
+    dosage_form_nm,
+    strnt_desc,
+    pri_spcl_desc,
+    provider_st_cd,
+    age_cat) %>%
+  filter(rx_dosage_amt > 0)
+
+```
+
+```{r}
+patient_demographics <- read_csv("Q.patient_demographics.csv")
+
+patient_demographics <- patient_demographics %>%
+  filter (pat_age_nbr >=0) %>%
+  mutate(age_cat = case_when(
+  pat_age_nbr < 18 ~ "Pediatrics",
+  pat_age_nbr >= 65 ~ "Elders",
+  TRUE ~ "Adults"
+  ))
+###
+
+usage_full <- read_csv("Q.usage_with age.csv")
+usage_full <- usage_full %>%
+  filter_at(vars(antibiotic_name, patient_age, provider_description), all_vars(!is.na(.)))
+
+usage_full <- usage_full %>%
+  filter (patient_age >=0) %>%
+  mutate(age_cat = case_when(
+  patient_age < 18 ~ "Pediatrics",
+  patient_age >= 65 ~ "Elders",
+  TRUE ~ "Adults"
+  ))
+```
+
+# make top used antibiotic groups within each category in IQVIA data
+
+```{r}
+patient_demographics %>%
+  group_by(usc_lvl3_desc) %>%
+  summarise(n = n_distinct(unifm_prod_nm))%>%
+  arrange(desc(n))
+
+top_prod <- patient_demographics %>%
+  filter(usc_lvl3_desc == "ANTNFCT SYSTEMIC, OTHER") %>%
+  group_by(unifm_prod_nm) %>%
+  summarise(count = sum(n)) %>%
+  arrange(desc(count)) %>%
+  slice_head(n=5) 
+antnfct_systemic<-top_prod$unifm_prod_nm
+
+
+top_prod <- patient_demographics %>%
+  filter(usc_lvl3_desc == "ANTNFCT, BROAD/MEDIUM SPECTRUM") %>%
+  group_by(unifm_prod_nm) %>%
+  summarise(count = sum(n)) %>%
+  arrange(desc(count)) %>%
+  slice_head(n=5) 
+antnfct_broad<-top_prod$unifm_prod_nm
+
+
+top_prod <- patient_demographics %>%
+  filter(usc_lvl3_desc == "B-LACTAM, INCREASED ACTIVITY") %>%
+  group_by(unifm_prod_nm) %>%
+  summarise(count = sum(n)) %>%
+  arrange(desc(count)) %>%
+  slice_head(n=5) 
+b_lactam<-top_prod$unifm_prod_nm
+
+
+top_prod <- patient_demographics %>%
+  filter(usc_lvl3_desc == "OPHTHALMIC ANTI-INFECTIVES") %>%
+  group_by(unifm_prod_nm) %>%
+  summarise(count = sum(n)) %>%
+  arrange(desc(count)) %>%
+  slice_head(n=5) 
+ophthalmic<-top_prod$unifm_prod_nm
+
+
+top_prod <- patient_demographics %>%
+  filter(usc_lvl3_desc == "OTIC ANTI-INFECTIVES") %>%
+  group_by(unifm_prod_nm) %>%
+  summarise(count = sum(n)) %>%
+  arrange(desc(count)) %>%
+  slice_head(n=5) 
+otic<-top_prod$unifm_prod_nm
+
+
+top_prod <- patient_demographics %>%
+  filter(usc_lvl3_desc == "OXAZOLIDINONES") %>%
+  group_by(unifm_prod_nm) %>%
+  summarise(count = sum(n)) %>%
+  arrange(desc(count)) %>%
+  slice_head(n=5) 
+oxazolidinones<-top_prod$unifm_prod_nm
+
+
+top_prod <- patient_demographics %>%
+  filter(usc_lvl3_desc == "SULFONAMIDES & TRIMETHOPRIM") %>%
+  group_by(unifm_prod_nm) %>%
+  summarise(count = sum(n)) %>%
+  arrange(desc(count)) %>%
+  slice_head(n=5) 
+sulf_trim<-top_prod$unifm_prod_nm
+
+
+top_prod <- patient_demographics %>%
+  filter(usc_lvl3_desc == "VAGINAL ANTI-INFECTIVES") %>%
+  group_by(unifm_prod_nm) %>%
+  summarise(count = sum(n)) %>%
+  arrange(desc(count)) %>%
+  slice_head(n=5) 
+vaginal<-top_prod$unifm_prod_nm
+```
+
+# !!import & clean WHO data
+
+```{r}
+WHO_cat <- read_xlsx("WHO_AWARE_EML_cat.xlsx")
+
+WHO_cat <- WHO_cat %>%
+ mutate(EML_2025 = case_when (
+     EML_2025 == 'Access group antibiotics' ~ 'Access',
+     EML_2025 == 'Reserve group antibiotics' ~ 'Reserve',
+     EML_2025 == 'Watch group antibiotics' ~ 'Watch',
+     EML_2025 == 'Antituberculosis medicines' ~ 'Antituberculosis',
+     EML_2025 == 'Antileprosy medicines' ~ 'Antileprosy'
+  ))
+
+
+#######
+
+AWARE <- read_csv("WHO_Pattern of AWaRe antibiotic use at national level_2025.csv")
+AWARE_cleaned<- AWARE %>% select(Period, c(5,8), Dim1, Value)
+
+AWARE_cleaned <- AWARE_cleaned %>% pivot_wider(
+  names_from = Period,
+  values_from = Value
+)
+
+AWARE_cleaned <- AWARE_cleaned %>%
+   mutate(Dim1 = case_when (
+     Dim1 == 'Not classified (%) / not recommended (%)' ~ 'Not_EML',
+     Dim1 == 'Reserve (%)' ~ 'Reserve',
+     Dim1 == 'Watch (%)' ~ 'Watch',
+     Dim1 == 'Access (%)' ~ 'Access'))
+
+AWARE_cleaned <- AWARE_cleaned %>% rename("%by_cat" = "Dim1")
+
+```
+
+#Add AWaRe categories to the IQVIA dataset
+
+```{r}
+WHO_catCombine <- WHO_cat %>%
+  mutate(Antibiotic = toupper(Antibiotic))
+```
+
+```{r}
+RX_labeled <- RX %>%
+  distinct(unifm_prod_nm)
+
+WHO_catCombine <- WHO_catCombine %>%
+  mutate(key = word(Antibiotic, 1)) %>%
+  select(-c(3,5,7))
+
+RX_labeled <- RX_labeled %>%
+  mutate(
+    match = case_when(
+      unifm_prod_nm == "CIPROFLOXACIN-CIPROFLOXACIN HCL" ~ "CIPROFLOXACIN",
+      unifm_prod_nm == "AMOXICILLIN & POT CLAVULANATE" ~ "AMOXICILLIN/CLAVULANIC-ACID",
+      unifm_prod_nm == "SULFAMETHOXAZOLE-TRIMETHOPRIM" ~ "SULFAMETHOXAZOLE/TRIMETHOPRIM",
+      unifm_prod_nm == "CEPHALEXIN" ~ "CEFALEXIN",
+      unifm_prod_nm == "PENICILLIN V POTASSIUM" ~ "PHENOXYMETHYLPENICILLIN",
+      unifm_prod_nm == "VANCOMYCIN HCL" ~ "VANCOMYCIN_ORAL",
+      unifm_prod_nm == "NEOMYCIN SULFATE" ~ "NEOMYCIN_IV",
+      unifm_prod_nm == "MINOCYCLINE HCL" ~ "MINOCYCLINE_IV",
+      unifm_prod_nm == "CEFPODOXIME PROXETIL" ~ "CEFPODOXIME-PROXETIL",
+      TRUE ~ unifm_prod_nm))
+
+RX_labeled <- RX_labeled %>%
+  mutate(key = if_else(
+  str_detect(match, " \\+ "),
+  match,
+  word(match, 1)
+))
+
+RX_labeled<- RX_labeled %>%
+  left_join(
+    WHO_catCombine,
+    by = "key") %>%
+  select(-c(2,3))
+
+writexl::write_xlsx(RX_labeled, "IQVIA21_RX_labeled.xlsx")
+```
+
+#Analysis
+
+##Did the U.S. AU in 2021 reach the 70% ACCESS target?
+```{r}
+RX <- RX %>%
+  left_join(RX_labeled %>% 
+              select(c(1, 4, 5, 6)),
+            by = "unifm_prod_nm")
+
+aware2025<- RX%>%count(AWARE_Cat2025) %>%
+  mutate(perc_2025 = round(n / sum(n), 4)*100)
+aware2021<- RX%>%count(AWARE_Cat2021) %>%
+  mutate(perc_2021 = round(n / sum(n), 4)*100)
+eml2025<- RX%>%count(EML_2025) %>%
+  mutate(perc_eml2025 = round(n / sum(n), 4)*100)
+```
+
+##How does the U.S. perform in AU compared to the rest of the world?
+```{r}
+#What's the performance of the U.S. in AU compared to the rest of the world?
+awareGlobal_A <- AWARE_cleaned %>%
+  filter(`%by_cat` == "Access",
+         `2021` >= 67,
+         `2022` >=67,
+         `2023` >= 67)%>%
+  pivot_longer(cols = 4:last_col(),
+               names_to = "year",
+               values_to = "perc_A")
+awareGlobal_A <- awareGlobal_A%>%select(-3)
+
+awareGlobal_R <- AWARE_cleaned %>%
+  filter(`%by_cat` == "Reserve",
+         `2021` < 1.6,
+         `2022` < 1.6,
+         `2023` < 1.6) %>%
+  pivot_longer(cols = 4:last_col(),
+               names_to = "year",
+               values_to = "perc_R")
+awareGlobal_R <- awareGlobal_R%>%select(-3)
+
+awareGlobal_AR <- awareGlobal_A%>%
+  inner_join(awareGlobal_R,
+            by = c("Location", "year"))
+awareGlobal_AR <- awareGlobal_AR%>% select(-5)
+awareGlobal_AR <- awareGlobal_AR%>% rename("Region"="ParentLocation.x")
+
+unique(awareGlobal_AR$Location)
+unique(awareGlobal_AR$Region)
+```
+
+```{r}
+writexl::write_xlsx(awareGlobal_AR, "WHO_percAR_1623.xlsx")
+```
+
+##remove redundant tabels
+```{r}
+#| echo: false
+rm(list = c("awareGlobal_A", "awareGlobal_R", "unfiltered", "WHO_catCombine", "AWARE"))
+```
+
+#
