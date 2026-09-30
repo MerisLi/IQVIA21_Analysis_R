@@ -235,6 +235,7 @@ writexl::write_xlsx(RX_labeled, "IQVIA21_RX_labeled.xlsx")
 #Analysis
 
 ##Did the U.S. AU in 2021 reach the 70% ACCESS target?
+
 ```{r}
 RX <- RX %>%
   left_join(RX_labeled %>% 
@@ -250,6 +251,7 @@ eml2025<- RX%>%count(EML_2025) %>%
 ```
 
 ##How does the U.S. perform in AU compared to the rest of the world?
+
 ```{r}
 #What's the performance of the U.S. in AU compared to the rest of the world?
 awareGlobal_A <- AWARE_cleaned %>%
@@ -287,9 +289,10 @@ writexl::write_xlsx(awareGlobal_AR, "WHO_percAR_1623.xlsx")
 ```
 
 ##remove redundant tabels
+
 ```{r}
 #| echo: false
 rm(list = c("awareGlobal_A", "awareGlobal_R", "unfiltered", "WHO_catCombine", "AWARE"))
 ```
 
-#
+# 
