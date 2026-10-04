@@ -1,3 +1,20 @@
+#function for getting the correct AIC for gamma
+correct_gamma_aic <- function(model) {
+  # Extract the true MLE dispersion parameter
+  disp <- MASS::gamma.dispersion(model)
+  mu <- model$fitted.values
+  y <- model$y
+  p <- model$rank 
+  log_lik <- sum(dgamma(y, shape = 1/disp, scale = mu * disp, log = TRUE))
+  
+  # Compute AIC: -2 * logLik + 2 * (p + 1)
+  # (We add 1 to p because the dispersion parameter itself is an estimated parameter)
+  true_aic <- -2 * log_lik + 2 * (p + 1)
+  
+  return(true_aic)}
+
+
+
 #Amoxicillin
 RX_filtered <- RX%>%
   group_by(unifm_prod_nm, pri_spcl_desc) %>%
@@ -58,7 +75,7 @@ RX_filtered%>%
 
 
 #for assess test quality
-summary(model_amox)$aic
+correct_gamma_aic(model_amox)
 summary(model_amox)$deviance
 summary(model_amox)$null.deviance
 
@@ -100,7 +117,7 @@ list(exp(coef(model_cepha)))
 
 
 #for assess test quality
-summary(model_cepha)$aic
+correct_gamma_aic(model_cepha)
 summary(model_cepha)$deviance
 summary(model_cepha)$null.deviance
 summary(model_cepha)$df.residual
@@ -129,6 +146,8 @@ RX %>%
         strip.text = element_text(size = 7))+
   labs(title = "Distribution of RX amount across prescribing conditions",
        subtitle = "CIPROFLOXACIN HCL")
+
+
 
 
 
@@ -173,7 +192,7 @@ list(exp(coef(model_azith)))
 
 
 #for assess test quality
-summary(model_azith)$aic
+correct_gamma_aic(model_azith)
 summary(model_azith)$deviance
 summary(model_azith)$null.deviance
 summary(model_azith)$df.residual
@@ -227,7 +246,7 @@ list(exp(coef(model_sulfTri)))
 
 
 #for assess test quality
-summary(model_sulfTri)$aic
+correct_gamma_aic(model_sulfTri)
 summary(model_sulfTri)$deviance
 summary(model_sulfTri)$null.deviance
 summary(model_sulfTri)$df.residual

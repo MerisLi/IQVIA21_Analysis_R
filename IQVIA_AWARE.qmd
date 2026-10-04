@@ -33,15 +33,16 @@ filter (pat_age_nbr >=0) %>%
   ))
 
 RX <- unfiltered %>%
-  select(usc_lvl3_desc,
-    unifm_prod_nm,
-    pat_age_nbr,
-    rx_dosage_amt,
-    dosage_form_nm,
-    strnt_desc,
-    pri_spcl_desc,
-    provider_st_cd,
-    age_cat) %>%
+  select(month_id,
+         usc_lvl3_desc,
+      unifm_prod_nm,
+     pat_age_nbr,
+      rx_dosage_amt,
+     dosage_form_nm,
+      strnt_desc,
+      pri_spcl_desc,
+      provider_st_cd,
+      age_cat) %>%
   filter(rx_dosage_amt > 0)
 
 ```
@@ -165,8 +166,10 @@ WHO_cat <- WHO_cat %>%
      EML_2025 == 'Antileprosy medicines' ~ 'Antileprosy'
   ))
 
+```
 
-#######
+```{r}
+#no longer useful as DDD is not available
 
 AWARE <- read_csv("WHO_Pattern of AWaRe antibiotic use at national level_2025.csv")
 AWARE_cleaned<- AWARE %>% select(Period, c(5,8), Dim1, Value)
@@ -200,7 +203,7 @@ RX_labeled <- RX %>%
 
 WHO_catCombine <- WHO_catCombine %>%
   mutate(key = word(Antibiotic, 1)) %>%
-  select(-c(3,5,7))
+  select(-c(3,5,7,9))
 
 RX_labeled <- RX_labeled %>%
   mutate(
@@ -228,71 +231,72 @@ RX_labeled<- RX_labeled %>%
     WHO_catCombine,
     by = "key") %>%
   select(-c(2,3))
+```
 
+```{r}
 writexl::write_xlsx(RX_labeled, "IQVIA21_RX_labeled.xlsx")
 ```
 
 #Analysis
 
-##Did the U.S. AU in 2021 reach the 70% ACCESS target?
+##What are the frequencies of A, W, R antibiotic prescriptions, respectively
 
 ```{r}
 RX <- RX %>%
   left_join(RX_labeled %>% 
-              select(c(1, 4, 5, 6)),
+              select(c(1, 4, 5, 6, 7)),
             by = "unifm_prod_nm")
 
 aware2025<- RX%>%count(AWARE_Cat2025) %>%
   mutate(perc_2025 = round(n / sum(n), 4)*100)
 aware2021<- RX%>%count(AWARE_Cat2021) %>%
   mutate(perc_2021 = round(n / sum(n), 4)*100)
+aware2019<- RX%>%count(AWARE_Cat2019) %>%
+  mutate(perc_2019 = round(n / sum(n), 4)*100)
 eml2025<- RX%>%count(EML_2025) %>%
   mutate(perc_eml2025 = round(n / sum(n), 4)*100)
 ```
 
-##How does the U.S. perform in AU compared to the rest of the world?
-
 ```{r}
-#What's the performance of the U.S. in AU compared to the rest of the world?
-awareGlobal_A <- AWARE_cleaned %>%
-  filter(`%by_cat` == "Access",
-         `2021` >= 67,
-         `2022` >=67,
-         `2023` >= 67)%>%
-  pivot_longer(cols = 4:last_col(),
-               names_to = "year",
-               values_to = "perc_A")
-awareGlobal_A <- awareGlobal_A%>%select(-3)
+RX2018<-RX%>%
+  filter(str_starts(month_id,"2018"))
+RX2019<-RX%>%
+  filter(str_starts(month_id,"2019"))
+RX2020<-RX%>%
+  filter(str_starts(month_id,"2020"))
 
-awareGlobal_R <- AWARE_cleaned %>%
-  filter(`%by_cat` == "Reserve",
-         `2021` < 1.6,
-         `2022` < 1.6,
-         `2023` < 1.6) %>%
-  pivot_longer(cols = 4:last_col(),
-               names_to = "year",
-               values_to = "perc_R")
-awareGlobal_R <- awareGlobal_R%>%select(-3)
+RX2018%>%count(AWARE_Cat2025) %>%
+  mutate(perc_2019 = round(n / sum(n), 4)*100)
+RX2019%>%count(AWARE_Cat2025) %>%
+  mutate(perc_2019 = round(n / sum(n), 4)*100)
+RX2020%>%count(AWARE_Cat2025) %>%
+  mutate(perc_2019 = round(n / sum(n), 4)*100)
 
-awareGlobal_AR <- awareGlobal_A%>%
-  inner_join(awareGlobal_R,
-            by = c("Location", "year"))
-awareGlobal_AR <- awareGlobal_AR%>% select(-5)
-awareGlobal_AR <- awareGlobal_AR%>% rename("Region"="ParentLocation.x")
-
-unique(awareGlobal_AR$Location)
-unique(awareGlobal_AR$Region)
 ```
 
 ```{r}
-writexl::write_xlsx(awareGlobal_AR, "WHO_percAR_1623.xlsx")
+sumRX = sum(RX$rx_dosage_amt)
+RX %>%
+  group_by(AWARE_Cat2025) %>%
+  summarise(totalRX=sum(rx_dosage_amt),
+            totalRX_share = totalRX/sumRX*100)
 ```
 
-##remove redundant tabels
+```{r}
+noAMOXICILLIN<-RX %>%
+  filter(!str_starts(unifm_prod_nm,"AMOXICILLIN"))
+sumRX = sum(noAMOXICILLIN$rx_dosage_amt)
+noAMOXICILLIN%>%
+  group_by(AWARE_Cat2025) %>%
+  summarise(totalRX=sum(rx_dosage_amt),
+            totalRX_share = totalRX/sumRX*100)
+```
+
 
 ```{r}
 #| echo: false
-rm(list = c("awareGlobal_A", "awareGlobal_R", "unfiltered", "WHO_catCombine", "AWARE"))
+##remove redundant tabels
+#rm(list = c("awareGlobal_A", "awareGlobal_R", "unfiltered", "WHO_catCombine", "AWARE"))
 ```
 
 # 
