@@ -10,4 +10,4 @@ Analytic tool: SQL Workbench (raw data) + R (visualization & stats)
 
 Data coverage: (Should) Span multiple outpatient healthcare settings
 
-![Project Overview](project_overview.png)
+![Project Overview](./project_overview.png)
