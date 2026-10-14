@@ -292,7 +292,6 @@ noAMOXICILLIN%>%
             totalRX_share = totalRX/sumRX*100)
 ```
 
-
 ```{r}
 #| echo: false
 ##remove redundant tabels

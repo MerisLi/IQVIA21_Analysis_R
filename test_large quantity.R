@@ -27,6 +27,7 @@ RX_filtered$provider_st_cd <- factor(RX_filtered$provider_st_cd)
 RX_filtered$dosage_form_nm <- factor(RX_filtered$dosage_form_nm)
 
 
+
 #unique(RX_filtered$unifm_prod_nm)
 
 amox <- RX_filtered %>%
@@ -39,7 +40,7 @@ amox$dosage_form_nm <- relevel(amox$dosage_form_nm, ref = "CAPSULE")
 
 model_amox <- glm(
   estimated_quantity ~
-    pat_age_nbr +
+    pat_age_nbr+
     pri_spcl_desc +
     provider_st_cd +
     dosage_form_nm,
