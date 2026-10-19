@@ -37,6 +37,7 @@ usage_full <- usage_full %>%
 
 
 RX <- read_csv("RX_edited.csv")
+
 copayment <- read_csv("Copay_edited.csv")
 
 ```
@@ -1161,17 +1162,43 @@ testDispersion (quantity_test)
 
 ```{r}
 # check the insurance model categories 
-copayment%>%
+model_overview<- copayment%>%
   select(model_typ_cd, model_typ_nm, insurance_type) %>%
   distinct() %>%
   arrange(insurance_type)
 ```
 
-## Distribution of copayment and copayment outliers
+## (new) Distribution of copayment and copayment outliers, self-pay focused
+
+```{r}
+selfPay<- copayment %>%
+  filter(insurance_type == "Self-pay")
+```
+
+```{r}
+selfPay %>%
+  filter(usc_lvl3_desc == "ANTNFCT, BROAD/MEDIUM SPECTRUM") %>%
+  group_by(unifm_prod_nm) %>%
+  mutate(num=n())%>%
+  filter(num>10)%>%
+  ungroup()%>%
+  ggplot(aes(x=unifm_prod_nm, y=copay_amt, color=age_cat))+
+  geom_boxplot(width=0.5)+
+  facet_wrap(~ usc_lvl3_desc)+
+  theme(axis.text=element_text(size=7),
+        strip.text = element_text(size = 7),
+        axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))+
+  labs(title = "x",
+       subtitle = "Self-Pay Only")
+
+```
+
+## (partially revised) Distribution of copayment and copayment outliers
 
 ```{r}
 copayment %>%
-  filter(usc_lvl3_desc == "B-LACTAM, INCREASED ACTIVITY") %>%
+  filter(usc_lvl3_desc == "B-LACTAM, INCREASED ACTIVITY",
+         is.na(outlier)) %>%
   ggplot(aes(x=age_cat, y=copay_amt, color=insurance_type))+
   geom_boxplot(width=0.5)+
   facet_wrap(~ unifm_prod_nm)+
@@ -1181,9 +1208,10 @@ copayment %>%
        subtitle = "B-LACTAM, INCREASED ACTIVITY")
 
 # only AMOXICILLIN & POT CLAVULANATE	is analyzable
+#outlier-only
 copayment %>%
   filter(usc_lvl3_desc == "B-LACTAM, INCREASED ACTIVITY",
-         outlier != is.na(outlier)) %>%
+         !is.na(outlier)) %>% #return TRUE for non-NA cells in the outlier col
   group_by(pri_spcl_desc) %>%
   mutate(case=n())%>%
   filter(case>5)%>%
@@ -1199,8 +1227,8 @@ copayment %>%
 copayment %>%
   group_by(unifm_prod_nm) %>%
   mutate(num=n())%>%
-  filter(num>10)%>%
-  filter(usc_lvl3_desc == "ANTNFCT, BROAD/MEDIUM SPECTRUM") %>%
+  filter(num>100)%>%
+  filter(usc_lvl3_desc == "ANTNFCT, BROAD/MEDIUM SPECTRUM",  is.na(outlier)) %>%
   ggplot(aes(x=age_cat, y=copay_amt, color=insurance_type))+
   geom_boxplot(width=0.5)+
   facet_wrap(~ unifm_prod_nm)+
@@ -1282,8 +1310,9 @@ copayment %>%
 copayment %>%
   group_by(unifm_prod_nm) %>%
   mutate(num=n())%>%
-  filter(num>10)%>%
-  filter(usc_lvl3_desc == "SULFONAMIDES & TRIMETHOPRIM") %>%
+  filter(num>100)%>%
+  filter(usc_lvl3_desc == "SULFONAMIDES & TRIMETHOPRIM",
+         is.na(outlier)) %>%
   ggplot(aes(x=age_cat, y=copay_amt, color=insurance_type))+
   geom_boxplot(width=0.5)+
   facet_wrap(~ unifm_prod_nm)+
@@ -1291,6 +1320,7 @@ copayment %>%
         strip.text = element_text(size = 7))+
   labs(title = "Distribution of copayment amounts by insurance plan model type across age groups",
        subtitle = "SULFONAMIDES & TRIMETHOPRIM")
+
 
 #SULFAMETHOXAZOLE-TRIMETHOPRIM has an outstanding amount of outliers
 copayment %>%
@@ -1312,8 +1342,9 @@ copayment %>%
 copayment %>%
   group_by(unifm_prod_nm) %>%
   mutate(num=n())%>%
-  filter(num>10)%>%
-  filter(usc_lvl3_desc == "OPHTHALMIC ANTI-INFECTIVES") %>%
+  filter(num>100)%>%
+  filter(usc_lvl3_desc == "OPHTHALMIC ANTI-INFECTIVES",
+         is.na(outlier)) %>%
   ggplot(aes(x=age_cat, y=copay_amt, color=insurance_type))+
   geom_boxplot(width=0.5)+
   facet_wrap(~ unifm_prod_nm)+
@@ -1355,8 +1386,9 @@ copayment %>%
 copayment %>%
   group_by(unifm_prod_nm) %>%
   mutate(num=n())%>%
-  filter(num>10)%>%
-  filter(usc_lvl3_desc == "OTIC ANTI-INFECTIVES") %>%
+  filter(num>100)%>%
+  filter(usc_lvl3_desc == "OTIC ANTI-INFECTIVES",
+         is.na(outlier)) %>%
   ggplot(aes(x=age_cat, y=copay_amt, color=insurance_type))+
   geom_boxplot(width=0.5)+
   facet_wrap(~ unifm_prod_nm)+
@@ -1398,8 +1430,9 @@ copayment %>%
 copayment %>%
   group_by(unifm_prod_nm) %>%
   mutate(num=n())%>%
-  filter(num>10)%>%
-  filter(usc_lvl3_desc == "VAGINAL ANTI-INFECTIVES") %>%
+  filter(num>100)%>%
+  filter(usc_lvl3_desc == "VAGINAL ANTI-INFECTIVES",
+         is.na(outlier)) %>%
   ggplot(aes(x=age_cat, y=copay_amt, color=insurance_type))+
   geom_boxplot(width=0.5)+
   facet_wrap(~ unifm_prod_nm)+
@@ -1425,35 +1458,27 @@ copayment %>%
 ```
 
 ```{r}
-copayment %>%
-  group_by(unifm_prod_nm) %>%
-  mutate(num=n())%>%
-  filter(num>5)%>%
-  filter(usc_lvl3_desc == "ANTNFCT SYSTEMIC, OTHER") %>%
-  ggplot(aes(x=age_cat, y=copay_amt, color=insurance_type))+
-  geom_boxplot(width=0.5)+
-  facet_wrap(~ unifm_prod_nm)+
-  theme(axis.text=element_text(size=7),
-        strip.text = element_text(size = 7))+
-  labs(title = "Distribution of copayment amounts by insurance plan model type across age groups",
-       subtitle = "ANTNFCT SYSTEMIC, OTHER")
+#ANTNFCT SYSTEMIC, OTHER; OXAZOLIDINONES: too few prescriptions & no outliers
+```
 
-#no outliers
+### make the summary table
+
+```{r}
+summary_copay <- copayment%>%
+  group_by(usc_lvl3_desc, unifm_prod_nm) %>%
+  summarise(
+    n = n(),
+    n_outlier = sum(!is.na(outlier)),
+    n_norm = sum(is.na(outlier)),
+    outlier_per = round(n_outlier / n * 100, 3),
+    min_all = min(copay_amt, na.rm = TRUE),
+    median_all = median(copay_amt, na.rm = TRUE),
+    median_norm = median(copay_amt[is.na(outlier)], na.rm = TRUE),
+    max_all = max(copay_amt, na.rm = TRUE)
+  ) %>%
+  arrange(desc(n))
 ```
 
 ```{r}
-copayment %>%
-  group_by(unifm_prod_nm) %>%
-  mutate(num=n())%>%
-  filter(num>5)%>%
-  filter(usc_lvl3_desc == "OXAZOLIDINONES") %>%
-  ggplot(aes(x=age_cat, y=copay_amt, color=insurance_type))+
-  geom_boxplot(width=0.5)+
-  facet_wrap(~ unifm_prod_nm)+
-  theme(axis.text=element_text(size=7),
-        strip.text = element_text(size = 7))+
-  labs(title = "Distribution of copayment amounts by insurance plan model type across age groups",
-       subtitle = "OXAZOLIDINONES")
-
-#only one outlier
+writexl::write_xlsx(summary_copay, "summary_copay.xlsx")
 ```
