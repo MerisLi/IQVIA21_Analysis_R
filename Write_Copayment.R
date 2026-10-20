@@ -28,7 +28,8 @@ copayment <- unfiltered %>%
          model_typ_cd,
          model_typ_nm,
          age_cat)%>%
-  filter(copay_amt > 0)
+  filter(copay_amt > 0,
+         !is.na(unifm_prod_nm))
 
 
 

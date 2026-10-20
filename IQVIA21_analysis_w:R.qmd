@@ -1158,7 +1158,7 @@ testDispersion (quantity_test)
 
 ```
 
-#Copayment
+# Copayment
 
 ```{r}
 # check the insurance model categories 
@@ -1172,25 +1172,88 @@ model_overview<- copayment%>%
 
 ```{r}
 selfPay<- copayment %>%
-  filter(insurance_type == "Self-pay")
+  filter(insurance_type == "Self-pay",
+         !is.na(unifm_prod_nm)) 
+#comment on 10/19/26: actually, in the plot drawn without outliers, the distribution of self-pay is no longer that werid (e.g. the median is no longer dramatically high).
 ```
 
 ```{r}
-selfPay %>%
-  filter(usc_lvl3_desc == "ANTNFCT, BROAD/MEDIUM SPECTRUM") %>%
-  group_by(unifm_prod_nm) %>%
-  mutate(num=n())%>%
-  filter(num>10)%>%
-  ungroup()%>%
-  ggplot(aes(x=unifm_prod_nm, y=copay_amt, color=age_cat))+
-  geom_boxplot(width=0.5)+
-  facet_wrap(~ usc_lvl3_desc)+
-  theme(axis.text=element_text(size=7),
-        strip.text = element_text(size = 7),
-        axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))+
-  labs(title = "x",
-       subtitle = "Self-Pay Only")
+#count the number of prescriptions that are self-paid
+copay_N <- copayment %>%
+  group_by(usc_lvl3_desc, age_cat) %>%
+  count(unifm_prod_nm) %>%
+  arrange(desc(n)) %>%
+  rename("total" = "n")%>%
+  ungroup()
+  
 
+selfPay_N<- selfPay %>%
+  group_by(usc_lvl3_desc, age_cat) %>%
+  count(unifm_prod_nm) %>%
+  arrange(desc(n)) %>%
+  rename("self_total" = "n") %>%
+  ungroup()
+
+selfPay_cleaned <- left_join(copay_N, 
+          selfPay_N, 
+          by=c("usc_lvl3_desc", "age_cat", "unifm_prod_nm"))
+
+```
+
+```{r}
+selfPay_cleaned<- selfPay_cleaned %>%
+  mutate(selfPay_perc = round(self_total/total*100, 3))
+         
+selfPay_cleaned<- selfPay_cleaned %>%   
+  group_by(unifm_prod_nm) %>%
+   mutate(allAge_presc = sum(total, na.rm = TRUE),
+          allAge_selfPay = sum(self_total, na.rm = TRUE))%>%
+  pivot_longer(
+    cols = c(total, self_total),
+    names_to = "payment_type",
+    values_to = "presc_count"
+  )
+```
+
+```{r}
+#non-self-paid copay
+selfPay_cleaned %>%
+  filter(allAge_selfPay==0,
+         !is.na(presc_count)) %>%
+  group_by(usc_lvl3_desc) %>%
+  slice_max(allAge_presc, n=10) %>%
+  ungroup() %>%
+ #View() %>%
+  ggplot(aes(x=reorder(unifm_prod_nm, presc_count), 
+             y=presc_count, fill=age_cat))+
+  geom_col()+
+  labs(
+    x = "Product",
+    y = "Prescription count",
+    fill = "Payment type",
+    title = "Number of Antibiotic Prescriptions with Non-Self-Paid Copay, by Age Group") +
+  coord_flip()
+
+```
+
+
+```{r}
+#self-paid copay and percentage
+selfPay_cleaned %>%
+  filter(!is.na(presc_count)) %>%
+  group_by(usc_lvl3_desc, payment_type) %>%
+  slice_max(allAge_presc, n=10) %>%
+ #View()) %>%
+  ungroup()%>%
+  ggplot(aes(x=reorder(unifm_prod_nm, allAge_presc),
+             y=presc_count, fill=payment_type))+
+  geom_col(position = "stack") + #or "stack"
+  labs(
+    x = "Product",
+    y = "Prescription count",
+    fill = "Payment type",
+    title = "Distribution of Self-Pay Prescriptions Among Copay-Charged Prescriptions")+
+  coord_flip()
 ```
 
 ## (partially revised) Distribution of copayment and copayment outliers
