@@ -38,7 +38,7 @@ usage_full <- usage_full %>%
 
 RX <- read_csv("RX_edited.csv")
 
-copayment <- read_csv("Copay_edited.csv")
+payment <- read_csv("Payment_edited.csv")
 
 ```
 
@@ -1158,28 +1158,113 @@ testDispersion (quantity_test)
 
 ```
 
-# Copayment
+# Payment
 
 ```{r}
 # check the insurance model categories 
-model_overview<- copayment%>%
+model_overview<- payment%>%
   select(model_typ_cd, model_typ_nm, insurance_type) %>%
   distinct() %>%
   arrange(insurance_type)
 ```
 
-## (new) Distribution of copayment and copayment outliers, self-pay focused
+
+## (new) Distribution of customer price, out-of-pocket amount, and patient share
+
+### Distributions of patient-share by antibiotic categories
+```{r}
+payment<- payment %>%
+  mutate(pat_share = round(pat_pay_amt / cust_prc *100, 3))
+```
 
 ```{r}
-selfPay<- copayment %>%
+payment %>%
+  filter(usc_lvl3_desc=="ANTNFCT, BROAD/MEDIUM SPECTRUM",
+         !is.na(cust_prc_outlier))%>%
+  group_by(unifm_prod_nm)%>%
+  mutate(num=n())%>%
+  filter(num>100)%>%
+  ungroup()%>%
+  ggplot(aes(x=unifm_prod_nm, y=pat_share, color=unifm_prod_nm))+
+  geom_boxplot()+
+  facet_wrap(~insurance_type)+
+  coord_flip()+
+  theme(legend.position = "none")
+```
+
+```{r}
+payment %>%
+  filter(usc_lvl3_desc=="B-LACTAM, INCREASED ACTIVITY",
+         !is.na(cust_prc_outlier))%>%
+  group_by(unifm_prod_nm)%>%
+  mutate(num=n())%>%
+  filter(num>100)%>%
+  ungroup()%>%
+  ggplot(aes(x=unifm_prod_nm, y=pat_share, color=unifm_prod_nm))+
+  geom_boxplot()+
+  facet_wrap(~insurance_type)+
+  coord_flip()+
+  theme(legend.position = "none")
+```
+
+```{r}
+payment %>%
+  filter(usc_lvl3_desc=="SULFONAMIDES & TRIMETHOPRIM",
+         !is.na(cust_prc_outlier))%>%
+  group_by(unifm_prod_nm)%>%
+  mutate(num=n())%>%
+  filter(num>100)%>%
+  ungroup()%>%
+  ggplot(aes(x=unifm_prod_nm, y=pat_share, color=unifm_prod_nm))+
+  geom_boxplot()+
+  facet_wrap(~insurance_type)+
+  coord_flip()+
+  theme(legend.position = "none")
+```
+
+```{r}
+payment %>%
+  filter(usc_lvl3_desc=="OPHTHALMIC ANTI-INFECTIVES",
+         !is.na(cust_prc_outlier))%>%
+  group_by(unifm_prod_nm)%>%
+  mutate(num=n())%>%
+  filter(num>50)%>%
+  ungroup()%>%
+  ggplot(aes(x=unifm_prod_nm, y=pat_share, color=unifm_prod_nm))+
+  geom_boxplot()+
+  facet_wrap(~insurance_type)+
+  coord_flip()+
+  theme(legend.position = "none")
+```
+
+```{r}
+payment %>%
+  filter(usc_lvl3_desc=="OTIC ANTI-INFECTIVES",
+         !is.na(cust_prc_outlier))%>%
+  group_by(unifm_prod_nm)%>%
+  mutate(num=n())%>%
+  filter(num>10)%>%
+  ungroup()%>%
+  View() %>%
+  ggplot(aes(x=unifm_prod_nm, y=pat_share, color=unifm_prod_nm))+
+  geom_boxplot()+
+  facet_wrap(~insurance_type)+
+  coord_flip()+
+  theme(legend.position = "none")
+```
+
+
+### Distributions of self-paid perc & not involving self-paid at all
+
+```{r}
+selfPay<- payment %>%
   filter(insurance_type == "Self-pay",
          !is.na(unifm_prod_nm)) 
-#comment on 10/19/26: actually, in the plot drawn without outliers, the distribution of self-pay is no longer that werid (e.g. the median is no longer dramatically high).
 ```
 
 ```{r}
 #count the number of prescriptions that are self-paid
-copay_N <- copayment %>%
+payment_N <- payment %>%
   group_by(usc_lvl3_desc, age_cat) %>%
   count(unifm_prod_nm) %>%
   arrange(desc(n)) %>%
@@ -1194,17 +1279,16 @@ selfPay_N<- selfPay %>%
   rename("self_total" = "n") %>%
   ungroup()
 
-selfPay_cleaned <- left_join(copay_N, 
+selfPay_cleaned <- left_join(payment_N, 
           selfPay_N, 
           by=c("usc_lvl3_desc", "age_cat", "unifm_prod_nm"))
 
+selfPay_cleaned<- selfPay_cleaned %>%
+  mutate(selfPay_perc = round(self_total/total*100, 3))
 ```
 
 ```{r}
-selfPay_cleaned<- selfPay_cleaned %>%
-  mutate(selfPay_perc = round(self_total/total*100, 3))
-         
-selfPay_cleaned<- selfPay_cleaned %>%   
+selfPay_cleaned_long<- selfPay_cleaned %>%   
   group_by(unifm_prod_nm) %>%
    mutate(allAge_presc = sum(total, na.rm = TRUE),
           allAge_selfPay = sum(self_total, na.rm = TRUE))%>%
@@ -1216,13 +1300,10 @@ selfPay_cleaned<- selfPay_cleaned %>%
 ```
 
 ```{r}
-#non-self-paid copay
-selfPay_cleaned %>%
+#non-self-paid
+selfPay_cleaned_long %>%
   filter(allAge_selfPay==0,
          !is.na(presc_count)) %>%
-  group_by(usc_lvl3_desc) %>%
-  slice_max(allAge_presc, n=10) %>%
-  ungroup() %>%
  #View() %>%
   ggplot(aes(x=reorder(unifm_prod_nm, presc_count), 
              y=presc_count, fill=age_cat))+
@@ -1231,32 +1312,62 @@ selfPay_cleaned %>%
     x = "Product",
     y = "Prescription count",
     fill = "Payment type",
-    title = "Number of Antibiotic Prescriptions with Non-Self-Paid Copay, by Age Group") +
+    title = "Number of Prescriptions for Antibiotics Paid Entirelyt Not Through Self-Pay, by Age Group") +
   coord_flip()
 
 ```
 
-
 ```{r}
-#self-paid copay and percentage
-selfPay_cleaned %>%
+#self-paid and the percentage in total
+selfPay_cleaned_long %>%
   filter(!is.na(presc_count)) %>%
-  group_by(usc_lvl3_desc, payment_type) %>%
-  slice_max(allAge_presc, n=10) %>%
- #View()) %>%
+  group_by(usc_lvl3_desc, age_cat) %>%
+  slice_max(presc_count, n=5) %>%
+  #View() %>%
   ungroup()%>%
   ggplot(aes(x=reorder(unifm_prod_nm, allAge_presc),
              y=presc_count, fill=payment_type))+
-  geom_col(position = "stack") + #or "stack"
+  geom_col(position = "stack") + 
+ # geom_col(position = "fill") + 
   labs(
     x = "Product",
     y = "Prescription count",
     fill = "Payment type",
-    title = "Distribution of Self-Pay Prescriptions Among Copay-Charged Prescriptions")+
+    title = "Percentage of Prescriptions Paid")+
   coord_flip()
 ```
 
-## (partially revised) Distribution of copayment and copayment outliers
+## make the summary table
+
+```{r}
+summary_payment <- payment%>%
+  group_by(usc_lvl3_desc, unifm_prod_nm, age_cat) %>%
+  summarise(
+    n = n(),
+    n_custPrc_outlier = sum(!is.na(cust_prc_outlier)),
+    n_custPrc_norm = sum(is.na(cust_prc_outlier)),
+    outlier_per = round(n_custPrc_outlier / n * 100, 3),
+    min_cust = min(cust_prc, na.rm = TRUE),
+    median_cust = median(cust_prc, na.rm = TRUE),
+    median_custNorm = median(cust_prc[is.na(cust_prc_outlier)], na.rm = TRUE),
+    max_cust = max(cust_prc, na.rm = TRUE)
+  ) %>%
+  arrange(desc(n))
+
+summary_payment <- left_join(summary_payment, 
+          select(selfPay_cleaned, 
+                 usc_lvl3_desc, unifm_prod_nm, age_cat, selfPay_perc), 
+          by=c("usc_lvl3_desc", "age_cat", "unifm_prod_nm")) 
+
+```
+
+```{r}
+writexl::write_xlsx(summary_payment, "summary_payment.xlsx")
+```
+
+
+
+## (discard) Distribution of copayment and copayment outliers
 
 ```{r}
 copayment %>%
@@ -1524,24 +1635,3 @@ copayment %>%
 #ANTNFCT SYSTEMIC, OTHER; OXAZOLIDINONES: too few prescriptions & no outliers
 ```
 
-### make the summary table
-
-```{r}
-summary_copay <- copayment%>%
-  group_by(usc_lvl3_desc, unifm_prod_nm) %>%
-  summarise(
-    n = n(),
-    n_outlier = sum(!is.na(outlier)),
-    n_norm = sum(is.na(outlier)),
-    outlier_per = round(n_outlier / n * 100, 3),
-    min_all = min(copay_amt, na.rm = TRUE),
-    median_all = median(copay_amt, na.rm = TRUE),
-    median_norm = median(copay_amt[is.na(outlier)], na.rm = TRUE),
-    max_all = max(copay_amt, na.rm = TRUE)
-  ) %>%
-  arrange(desc(n))
-```
-
-```{r}
-writexl::write_xlsx(summary_copay, "summary_copay.xlsx")
-```

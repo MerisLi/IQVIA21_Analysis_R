@@ -17,25 +17,25 @@ unfiltered <- unfiltered %>%
     TRUE ~ "Adults"
   ))
 
-copayment <- unfiltered %>%
+payment <- unfiltered %>%
   select(usc_lvl3_desc,
          unifm_prod_nm,
          pri_spcl_desc,
          pat_age_nbr,
+         rx_dosage_amt,
          copay_amt,
          cust_prc,
          pat_pay_amt,
          model_typ_cd,
          model_typ_nm,
          age_cat)%>%
-  filter(copay_amt > 0,
-         !is.na(unifm_prod_nm))
+  filter(!is.na(unifm_prod_nm))
 
 
 
 ## !!make insurance model categories
 
-copayment <- copayment %>%
+payment <- payment %>%
   mutate(insurance_type = case_when(
     str_detect(model_typ_nm, "MEDICARE") ~ "Medicare",
     str_detect(model_typ_nm, "MEDICAID") ~ "Medicaid",
@@ -50,23 +50,24 @@ copayment <- copayment %>%
   ))
 
 
-# check the assignment of categories 
-copayment%>%
-  select(model_typ_cd, model_typ_nm, insurance_type) %>%
-  distinct() %>%
-  arrange(insurance_type)
-
-
-## mark copayment outliers
+## mark payment outliers per antibiotic by age
 
 is_outlier <- function(x) {
-  return(x < quantile(x, 0.25) - 1.5 * IQR(x) | x > quantile(x, 0.75) + 1.5 * IQR(x))
+  q1 <- quantile(x, 0.25, na.rm = TRUE)
+  q3 <- quantile(x, 0.75, na.rm = TRUE)
+  iqr <- IQR(x, na.rm = TRUE)
+  
+  return(x < q1 - 1.5 * iqr | x > q3 + 1.5 * iqr)
 }
-copayment <- copayment %>%
-  group_by(usc_lvl3_desc, age_cat) %>%
-  mutate(outlier = ifelse(is_outlier(copay_amt), copay_amt, as.numeric(NA)))%>%
+
+payment <- payment %>%
+  group_by(unifm_prod_nm, age_cat) %>%
+  mutate(cust_prc_outlier = ifelse(is_outlier(cust_prc), cust_prc, as.numeric(NA)))%>%
   ungroup()
 
+#remove all entries having NA in payment information
+payment<-payment[complete.cases(payment[, c("cust_prc", "pat_pay_amt", "copay_amt")]), ]
 
-write_csv(copayment, "Copay_edited.csv")
+
+write_csv(payment, "Payment_edited.csv")
 
