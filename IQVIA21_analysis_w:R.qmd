@@ -36,7 +36,7 @@ usage_full <- usage_full %>%
   filter_at(vars(antibiotic_name, patient_age, provider_description), all_vars(!is.na(.)))
 
 
-RX <- read_csv("RX_edited.csv")
+RX <- read_csv("RX_updated.csv")
 
 payment <- read_csv("Payment_edited.csv")
 
@@ -1168,10 +1168,10 @@ model_overview<- payment%>%
   arrange(insurance_type)
 ```
 
-
 ## (new) Distribution of customer price, out-of-pocket amount, and patient share
 
 ### Distributions of patient-share by antibiotic categories
+
 ```{r}
 payment<- payment %>%
   mutate(pat_share = round(pat_pay_amt / cust_prc *100, 3))
@@ -1252,7 +1252,6 @@ payment %>%
   coord_flip()+
   theme(legend.position = "none")
 ```
-
 
 ### Distributions of self-paid perc & not involving self-paid at all
 
@@ -1364,8 +1363,6 @@ summary_payment <- left_join(summary_payment,
 ```{r}
 writexl::write_xlsx(summary_payment, "summary_payment.xlsx")
 ```
-
-
 
 ## (discard) Distribution of copayment and copayment outliers
 
@@ -1634,4 +1631,3 @@ copayment %>%
 ```{r}
 #ANTNFCT SYSTEMIC, OTHER; OXAZOLIDINONES: too few prescriptions & no outliers
 ```
-
