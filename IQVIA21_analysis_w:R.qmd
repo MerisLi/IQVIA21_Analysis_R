@@ -38,7 +38,7 @@ usage_full <- usage_full %>%
 
 RX <- read_csv("RX_updated.csv")
 
-payment <- read_csv("Payment_edited.csv")
+payment <- read_csv("Q.payment.csv")
 
 ```
 
@@ -922,39 +922,43 @@ filter(usc_lvl3_desc == "OXAZOLIDINONES") %>%
 ```{r}
 summary_rx <-
 RX %>%
-group_by(unifm_prod_nm) %>%
+group_by(usc_lvl3_desc, unifm_prod_nm, strnt_desc) %>%
 summarise(
   n = n(),
 
-  median_rx =
+  median_dailyRX =
     median(rx_dosage_amt),
   
   median_strength = median(ant1_mg),
+  
+  median_daySupp = median(days_supply_cnt),
 
-  median_quantity =
-    median(estimated_quantity,na.rm = TRUE),
+  median_totalQuant =
+    median(dspnsd_qty,na.rm = TRUE),
 
-  p95 =
+  p95_totalQuant =
     quantile(
-      estimated_quantity,
+      dspnsd_qty,
       0.95,
       na.rm = TRUE),
 
-  max_quantity =
-    max(estimated_quantity),
+  max_totalQuant =
+    max(dspnsd_qty),
 
   prop_high_strength =
     mean(highest_strnt, na.rm = TRUE),
 
-  prop_large_quantity =
-    mean(large_quantity, na.rm = TRUE)
+  prop_large_totalQuant =
+    mean(large_quantity, na.rm = TRUE),
+ 
+   .groups = "drop"
 ) %>%
-  arrange(desc(median_strength), by_group=TRUE)
+  arrange(desc(median_totalQuant), by_group=TRUE)
 
 ```
 
 ```{r}
-writexl::write_xlsx(summary_rx, "summary_rx.xlsx")
+writexl::write_xlsx(summary_rx, "summary_rx_updated.xlsx")
 ```
 
 ### what factors are associated with stronger formulation?
@@ -970,14 +974,12 @@ RX_filtered <- RX%>%
 RX_model <- RX_filtered %>%
   group_by(unifm_prod_nm) %>%
   filter(n_distinct(highest_strnt) == 2) %>%
-  ungroup()
+  ungroup() 
 
 RX_model$pri_spcl_desc <- factor(RX_model$pri_spcl_desc)
 RX_model$provider_st_cd <- factor(RX_model$provider_st_cd)
-RX_model$dosage_form_nm <- factor(RX_model$dosage_form_nm)
-RX_model$strnt_desc <- factor(RX_model$strnt_desc)
-RX_model$highest_strnt <- factor(RX_model$highest_strnt)
 RX_model$unifm_prod_nm <- factor(RX_model$unifm_prod_nm)
+RX_model$age_cat <- factor(RX_model$age_cat)
 
   
 unique(RX_filtered$unifm_prod_nm)
@@ -985,24 +987,23 @@ unique(RX_filtered$unifm_prod_nm)
 
 RX_model$unifm_prod_nm <- relevel(RX_model$unifm_prod_nm, ref = "AMOXICILLIN")
 RX_model$provider_st_cd <- relevel(RX_model$provider_st_cd, ref = "NY")
-RX_model$dosage_form_nm <- relevel(RX_model$dosage_form_nm, ref = "TABLET")
 RX_model$pri_spcl_desc <- relevel(RX_model$pri_spcl_desc, ref = "NURSE PRACTITIONER")
+RX_model$age_cat <- relevel(RX_model$age_cat, ref = "Adults")
 
 
 
 model_strength<- glm(
   highest_strnt ~
     unifm_prod_nm +
-    pat_age_nbr +
+    age_cat +
     pri_spcl_desc +
-    provider_st_cd +
-    dosage_form_nm,
+    provider_st_cd,
   family = binomial,
   data = RX_model
 )
 
 summary(model_strength)
-exp(coef(model_strength))
+data.frame(exp(coef(model_strength)))
 ```
 
 ```{r}
@@ -1011,14 +1012,10 @@ RX_filtered %>%
   group_by(provider_st_cd) %>%
   summarize(count=n())%>%
   arrange(desc(count))
-
-RX_filtered %>%
-  filter(unifm_prod_nm == "CLINDAMYCIN HCL")
 ```
 
 ```{r}
 #for testing feasibility
-table(RX$highest_strnt)
 prop.table(table(RX$highest_strnt))
 
 #for assess test quality
@@ -1026,17 +1023,11 @@ summary(model_strength)$aic
 summary(model_strength)$deviance
 summary(model_strength)$null.deviance
 
-
 table(RX$highest_strnt)
+table(RX_model$age_cat)
 table(RX_model$unifm_prod_nm)
 table(RX_model$pri_spcl_desc)
-table(RX_model$provider_st_cd)
-table(RX_model$dosage_form_nm)
-
-
-summary(model_strength)$coefficients %>%
-  as.data.frame() %>%
-  filter(`Pr(>|z|)` < 0.05) 
+as.data.frame(table(RX_model$provider_st_cd))
 ```
 
 ```{r}
@@ -1051,112 +1042,12 @@ plotQQunif(strength_test)
 
 
 testDispersion (strength_test)
-## The model has an ideal dispersion ratio (0.98507), which means it underestimates the variance by only ~1.5%, and there is no evidence (p>0.05) of seeing that deviation.
+## The model has an ideal dispersion ratio (0.97627), which means it underestimates the variance by only ~2.4%, and there is no evidence (p>0.05) of seeing that deviation.
 
 
 ```
 
-### what factors are associated with large prescription quantity?
-
-```{r}
-RX_filtered <- RX%>%
-  group_by(unifm_prod_nm, pri_spcl_desc) %>%
-  mutate(num = n()) %>%
-  ungroup() %>%
-  filter(num >50)
-
-RX_filtered$pri_spcl_desc <- factor(RX_filtered$pri_spcl_desc)
-RX_filtered$provider_st_cd <- factor(RX_filtered$provider_st_cd)
-RX_filtered$dosage_form_nm <- factor(RX_filtered$dosage_form_nm)
-
-  
-#unique(RX_filtered$unifm_prod_nm)
-
-amox <- RX_filtered %>%
-  filter(unifm_prod_nm == "AMOXICILLIN")
-
-amox$pri_spcl_desc <- relevel(amox$pri_spcl_desc, ref = "NURSE PRACTITIONER")
-amox$provider_st_cd <- relevel(amox$provider_st_cd, ref = "NY")
-amox$dosage_form_nm <- relevel(amox$dosage_form_nm, ref = "CAPSULE")
-
-
-model_amox <- glm(
-  estimated_quantity ~
-    pat_age_nbr +
-    pri_spcl_desc +
-    provider_st_cd +
-    dosage_form_nm,
-  family = Gamma(link = "log"),
-  data = amox
-)
-
-summary(model_amox)
-exp(coef(model_amox))
-```
-
-```{r}
-#for selecting ref
-RX %>%
-filter(unifm_prod_nm == "AMOXICILLIN") %>%
-  group_by(pri_spcl_desc) %>%
-  mutate(num = n()) %>%
-  ungroup() %>%
-  filter(num >50) %>%
-  ggplot(aes(x=unifm_prod_nm, y=rx_dosage_amt, color=dosage_form_nm))+
-  geom_boxplot(width=0.5)+
-  #facet_wrap(~ pri_spcl_desc)+
-  theme(axis.text=element_text(size=7),
-        strip.text = element_text(size = 7))+
-  labs(title = "Distribution of RX amount across prescribing conditions",
-       subtitle = "AMOXICILLIN")
-
-RX_filtered%>%
-  filter(unifm_prod_nm == "AMOXICILLIN") %>%
-  group_by(dosage_form_nm) %>%
-  summarize(count=n())
-```
-
-```{r}
-#for assess test quality
-#get the correct AIC for gamma
-correct_gamma_aic <- function(model) {
-  # Extract the true MLE dispersion parameter
-  disp <- MASS::gamma.dispersion(model)
-  mu <- model$fitted.values
-  y <- model$y
-  p <- model$rank 
-  log_lik <- sum(dgamma(y, shape = 1/disp, scale = mu * disp, log = TRUE))
-  
-  # Compute AIC: -2 * logLik + 2 * (p + 1)
-  # (We add 1 to p because the dispersion parameter itself is an estimated parameter)
-  true_aic <- -2 * log_lik + 2 * (p + 1)
-  
-  return(true_aic)}
-
-correct_gamma_aic(model_amox)
-
-summary(model_amox)$deviance
-summary(model_amox)$null.deviance
-
-table(amox$pri_spcl_desc)
-table(amox$provider_st_cd)
-table(amox$dosage_form_nm)
-
-
-summary(model_amox)$coefficients %>%
-  as.data.frame() %>%
-  filter(`Pr(>|z|)` < 0.05) 
-```
-
-```{r}
-#DHARMa
-
-quantity_test <- simulateResiduals(fittedModel = model_amox)
-plot(quantity_test)
-
-testDispersion (quantity_test)
-
-```
+### Test for quantity is in a separate file...
 
 # Payment
 
@@ -1189,6 +1080,8 @@ payment %>%
   geom_boxplot()+
   facet_wrap(~insurance_type)+
   coord_flip()+
+  labs(title="Percentage of Patient Share",
+      subtitle="ANTNFCT, BROAD/MEDIUM SPECTRUM")+
   theme(legend.position = "none")
 ```
 
@@ -1203,6 +1096,8 @@ payment %>%
   ggplot(aes(x=unifm_prod_nm, y=pat_share, color=unifm_prod_nm))+
   geom_boxplot()+
   facet_wrap(~insurance_type)+
+  labs(title="Percentage of Patient Share",
+       subtitle="B-LACTAM, INCREASED ACTIVITY")+
   coord_flip()+
   theme(legend.position = "none")
 ```
@@ -1218,6 +1113,8 @@ payment %>%
   ggplot(aes(x=unifm_prod_nm, y=pat_share, color=unifm_prod_nm))+
   geom_boxplot()+
   facet_wrap(~insurance_type)+
+  labs(title="Percentage of Patient Share",
+       subtitle="SULFONAMIDES & TRIMETHOPRIM")+
   coord_flip()+
   theme(legend.position = "none")
 ```
@@ -1233,6 +1130,8 @@ payment %>%
   ggplot(aes(x=unifm_prod_nm, y=pat_share, color=unifm_prod_nm))+
   geom_boxplot()+
   facet_wrap(~insurance_type)+
+  labs(title="Percentage of Patient Share",
+       subtitle="SULFONAMIDES & TRIMETHOPRIM")+
   coord_flip()+
   theme(legend.position = "none")
 ```
@@ -1249,6 +1148,8 @@ payment %>%
   ggplot(aes(x=unifm_prod_nm, y=pat_share, color=unifm_prod_nm))+
   geom_boxplot()+
   facet_wrap(~insurance_type)+
+  labs(title="Percentage of Patient Share",
+       subtitle="OTIC ANTI-INFECTIVES")+
   coord_flip()+
   theme(legend.position = "none")
 ```

@@ -69,5 +69,5 @@ payment <- payment %>%
 payment<-payment[complete.cases(payment[, c("cust_prc", "pat_pay_amt", "copay_amt")]), ]
 
 
-write_csv(payment, "Payment_edited.csv")
+write_csv(payment, "Q.payment.csv")
 
