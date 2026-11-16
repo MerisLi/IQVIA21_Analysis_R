@@ -53,6 +53,8 @@ summary_DDD<- summary_DDD|>
   mutate(sum=T+F,
         perc_T=T/sum)
 
+writexl::write_xlsx(summary_DDD, "summary_DDD.xlsx")
+
 ##############
 library(ggplot2)
 
