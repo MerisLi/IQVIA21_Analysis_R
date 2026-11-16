@@ -13,20 +13,16 @@ correct_gamma_aic <- function(model) {
   
   return(true_aic)}
 
-
-
-#Amoxicillin
 RX_filtered <- RX%>%
   group_by(unifm_prod_nm, pri_spcl_desc) %>%
   mutate(num = n()) %>%
   ungroup() %>%
   filter(num >50)
 
+#Amoxicillin
 RX_filtered$pri_spcl_desc <- factor(RX_filtered$pri_spcl_desc)
 RX_filtered$provider_st_cd <- factor(RX_filtered$provider_st_cd)
-RX_filtered$dosage_form_nm <- factor(RX_filtered$dosage_form_nm)
 RX_filtered$age_cat <- factor(RX_filtered$age_cat)
-
 
 
 amox <- RX_filtered %>%

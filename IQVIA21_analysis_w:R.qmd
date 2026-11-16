@@ -926,26 +926,22 @@ group_by(usc_lvl3_desc, unifm_prod_nm, strnt_desc) %>%
 summarise(
   n = n(),
 
-  median_dailyRX =
-    median(rx_dosage_amt),
+  mean_dailyRX = mean(rx_dosage_amt),
   
-  median_strength = median(ant1_mg),
+  median_dailyRX = median(rx_dosage_amt),
   
   median_daySupp = median(days_supply_cnt),
 
   median_totalQuant =
     median(dspnsd_qty,na.rm = TRUE),
 
-  p95_totalQuant =
-    quantile(
-      dspnsd_qty,
-      0.95,
-      na.rm = TRUE),
+  min_totalQuant =
+    min(dspnsd_qty),
 
   max_totalQuant =
     max(dspnsd_qty),
 
-  prop_high_strength =
+  is_highest_strnt =
     mean(highest_strnt, na.rm = TRUE),
 
   prop_large_totalQuant =
@@ -958,7 +954,7 @@ summarise(
 ```
 
 ```{r}
-writexl::write_xlsx(summary_rx, "summary_rx_updated.xlsx")
+writexl::write_xlsx(summary_rx, "summary_rx_updated1112.xlsx")
 ```
 
 ### what factors are associated with stronger formulation?
