@@ -1072,6 +1072,21 @@ payment %>%
   mutate(num=n())%>%
   filter(num>100)%>%
   ungroup()%>%
+  ggplot(aes(x=unifm_prod_nm, fill=unifm_prod_nm))+
+  geom_bar()+
+  facet_wrap(~insurance_type)+
+  coord_flip()+
+  labs(title="Prescription Count by Insurer Type",
+      subtitle="ANTNFCT, BROAD/MEDIUM SPECTRUM")+
+  theme(legend.position = "none")
+
+payment %>%
+  filter(usc_lvl3_desc=="ANTNFCT, BROAD/MEDIUM SPECTRUM",
+         !is.na(cust_prc_outlier))%>%
+  group_by(unifm_prod_nm)%>%
+  mutate(num=n())%>%
+  filter(num>100)%>%
+  ungroup()%>%
   ggplot(aes(x=unifm_prod_nm, y=pat_share, color=unifm_prod_nm))+
   geom_boxplot()+
   facet_wrap(~insurance_type)+
@@ -1082,6 +1097,21 @@ payment %>%
 ```
 
 ```{r}
+payment %>%
+  filter(usc_lvl3_desc=="B-LACTAM, INCREASED ACTIVITY",
+         !is.na(cust_prc_outlier))%>%
+  group_by(unifm_prod_nm)%>%
+  mutate(num=n())%>%
+  filter(num>100)%>%
+  ungroup()%>%
+  ggplot(aes(x=unifm_prod_nm, fill=unifm_prod_nm))+
+  geom_bar()+
+  facet_wrap(~insurance_type)+
+  labs(title="Prescription Count by Insurer Type",
+       subtitle="B-LACTAM, INCREASED ACTIVITY")+
+  coord_flip()+
+  theme(legend.position = "none")
+
 payment %>%
   filter(usc_lvl3_desc=="B-LACTAM, INCREASED ACTIVITY",
          !is.na(cust_prc_outlier))%>%
@@ -1106,22 +1136,20 @@ payment %>%
   mutate(num=n())%>%
   filter(num>100)%>%
   ungroup()%>%
-  ggplot(aes(x=unifm_prod_nm, y=pat_share, color=unifm_prod_nm))+
-  geom_boxplot()+
+  ggplot(aes(x=unifm_prod_nm, fill=unifm_prod_nm))+
+  geom_bar()+
   facet_wrap(~insurance_type)+
-  labs(title="Percentage of Patient Share",
+  labs(title="Prescription Count by Insurer Type",
        subtitle="SULFONAMIDES & TRIMETHOPRIM")+
   coord_flip()+
   theme(legend.position = "none")
-```
 
-```{r}
 payment %>%
-  filter(usc_lvl3_desc=="OPHTHALMIC ANTI-INFECTIVES",
+  filter(usc_lvl3_desc=="SULFONAMIDES & TRIMETHOPRIM",
          !is.na(cust_prc_outlier))%>%
   group_by(unifm_prod_nm)%>%
   mutate(num=n())%>%
-  filter(num>50)%>%
+  filter(num>100)%>%
   ungroup()%>%
   ggplot(aes(x=unifm_prod_nm, y=pat_share, color=unifm_prod_nm))+
   geom_boxplot()+
@@ -1132,23 +1160,6 @@ payment %>%
   theme(legend.position = "none")
 ```
 
-```{r}
-payment %>%
-  filter(usc_lvl3_desc=="OTIC ANTI-INFECTIVES",
-         !is.na(cust_prc_outlier))%>%
-  group_by(unifm_prod_nm)%>%
-  mutate(num=n())%>%
-  filter(num>10)%>%
-  ungroup()%>%
-  View() %>%
-  ggplot(aes(x=unifm_prod_nm, y=pat_share, color=unifm_prod_nm))+
-  geom_boxplot()+
-  facet_wrap(~insurance_type)+
-  labs(title="Percentage of Patient Share",
-       subtitle="OTIC ANTI-INFECTIVES")+
-  coord_flip()+
-  theme(legend.position = "none")
-```
 
 ### Distributions of self-paid perc & not involving self-paid at all
 
@@ -1161,7 +1172,7 @@ selfPay<- payment %>%
 ```{r}
 #count the number of prescriptions that are self-paid
 payment_N <- payment %>%
-  group_by(usc_lvl3_desc, age_cat) %>%
+  group_by(usc_lvl3_desc, insurance_type, age_cat) %>%
   count(unifm_prod_nm) %>%
   arrange(desc(n)) %>%
   rename("total" = "n")%>%
@@ -1169,7 +1180,7 @@ payment_N <- payment %>%
   
 
 selfPay_N<- selfPay %>%
-  group_by(usc_lvl3_desc, age_cat) %>%
+  group_by(usc_lvl3_desc, insurance_type, age_cat) %>%
   count(unifm_prod_nm) %>%
   arrange(desc(n)) %>%
   rename("self_total" = "n") %>%
@@ -1177,7 +1188,7 @@ selfPay_N<- selfPay %>%
 
 selfPay_cleaned <- left_join(payment_N, 
           selfPay_N, 
-          by=c("usc_lvl3_desc", "age_cat", "unifm_prod_nm"))
+          by=c("usc_lvl3_desc", "insurance_type", "age_cat", "unifm_prod_nm"))
 
 selfPay_cleaned<- selfPay_cleaned %>%
   mutate(selfPay_perc = round(self_total/total*100, 3))
@@ -1201,15 +1212,33 @@ selfPay_cleaned_long %>%
   filter(allAge_selfPay==0,
          !is.na(presc_count)) %>%
  #View() %>%
-  ggplot(aes(x=reorder(unifm_prod_nm, presc_count), 
-             y=presc_count, fill=age_cat))+
+  ggplot(aes(x=unifm_prod_nm, 
+             y=presc_count, fill=insurance_type))+
   geom_col()+
   labs(
     x = "Product",
     y = "Prescription count",
     fill = "Payment type",
-    title = "Number of Prescriptions for Antibiotics Paid Entirelyt Not Through Self-Pay, by Age Group") +
-  coord_flip()
+    title = "Antibiotic Prescriptions Covered Entirely by Third-Party Payers, by Insurer Type") +
+  coord_flip()+
+  theme(legend.position = "bottom",
+        legend.key.size = unit(0.3, "cm"))
+
+selfPay_cleaned_long %>%
+  filter(allAge_selfPay==0,
+         !is.na(presc_count)) %>%
+ #View() %>%
+  ggplot(aes(x=unifm_prod_nm, 
+             y=presc_count, fill=age))+
+  geom_col()+
+  labs(
+    x = "Product",
+    y = "Prescription count",
+    fill = "Payment type",
+    title = "Antibiotic Prescriptions Covered Entirely by Third-Party Payers, by Age Group") +
+  coord_flip()+
+  theme(legend.position = "bottom",
+        legend.key.size = unit(0.3, "cm"))
 
 ```
 
@@ -1219,7 +1248,7 @@ selfPay_cleaned_long %>%
   filter(!is.na(presc_count)) %>%
   group_by(usc_lvl3_desc, age_cat) %>%
   slice_max(presc_count, n=5) %>%
-  #View() %>%
+ # View() %>%
   ungroup()%>%
   ggplot(aes(x=reorder(unifm_prod_nm, allAge_presc),
              y=presc_count, fill=payment_type))+
@@ -1229,7 +1258,7 @@ selfPay_cleaned_long %>%
     x = "Product",
     y = "Prescription count",
     fill = "Payment type",
-    title = "Percentage of Prescriptions Paid")+
+    title = "Percentage of Self-Pay Prescriptions")+
   coord_flip()
 ```
 

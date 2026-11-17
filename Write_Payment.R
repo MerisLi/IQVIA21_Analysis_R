@@ -4,7 +4,7 @@ library(ggrepel)
 library(tidyverse)
 
 #######import data
-unfiltered <- read_csv("Q.unfiltered100k_1.csv")
+unfiltered <- read_csv("Q.unfiltered100k_2.csv")
 unfiltered <- unfiltered
 #na.omit()
 
@@ -22,7 +22,8 @@ payment <- unfiltered %>%
          unifm_prod_nm,
          pri_spcl_desc,
          pat_age_nbr,
-         rx_dosage_amt,
+         strnt_desc,
+         dspnsd_qty,
          copay_amt,
          cust_prc,
          pat_pay_amt,
